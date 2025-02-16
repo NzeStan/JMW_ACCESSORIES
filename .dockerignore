@@ -1,0 +1,9 @@
+.venv
+.git
+.gitignore
+dump.txt
+.env.dev
+.env.prod
+video_cache
+run_ngrok.sh
+sent_emails

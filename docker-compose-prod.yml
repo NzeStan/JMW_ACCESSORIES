@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    command: ./entrypoint.sh
+    environment:
+      - DJANGO_SETTINGS_MODULE=jmw.settings
+    env_file:
+      - .env.prod  # Production environment variables
+    volumes:
+      - .:/code
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+  db:
+    image: postgres:13
+    volumes:
+      - JMW_ACCESSORIES:/var/lib/postgresql/data/
+    environment:
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+
+volumes:
+  JMW_ACCESSORIES:

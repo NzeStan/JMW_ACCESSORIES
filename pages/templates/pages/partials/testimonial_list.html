@@ -1,0 +1,61 @@
+{% for testimonial in testimonials %}
+<div class="card bg-base-200 hover:shadow-lg transition-shadow duration-300">
+    <div class="card-body">
+        <!-- User Info Section -->
+        <div class="flex items-center mb-4">
+            <div class="avatar">
+                <div class="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
+                    <span class="text-lg font-semibold flex items-center justify-center w-full h-full">{{ testimonial.name|first|upper }}</span>
+                </div>
+            </div>
+            
+            <!-- User Details -->
+            <div class="ml-4">
+                <h3 class="font-bold">{{ testimonial.name }}</h3>
+                <!-- Star Rating -->
+                <div class="flex gap-1">
+                    {% for _ in "x"|rjust:testimonial.rating %}
+                        <i class="fas fa-star text-yellow-400"></i>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Timestamp -->
+            <div class="ml-auto text-sm text-gray-500">
+                {{ testimonial.created_at|timesince }} ago
+            </div>
+        </div>
+
+        <!-- Testimonial Content -->
+        <div class="prose">
+            <p class="text-base">{{ testimonial.comment }}</p>
+        </div>
+
+        {% if testimonial.user == request.user %}
+        <!-- Edit/Delete Options -->
+        <div class="flex gap-2 mt-4">
+            <a href="{% url 'pages:edit_testimonial' testimonial.id %}" 
+               class="btn btn-sm btn-ghost">
+                <i class="fas fa-edit mr-1"></i> Edit
+            </a>
+            <form method="post" 
+                  action="{% url 'pages:delete_testimonial' testimonial.id %}"
+                  class="inline"
+                  onsubmit="return confirm('Are you sure you want to delete this testimonial?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-ghost text-error">
+                    <i class="fas fa-trash-alt mr-1"></i> Delete
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="col-span-full text-center py-8">
+    <div class="text-gray-500">
+        <i class="fas fa-comments text-4xl mb-3"></i>
+        <p class="text-lg">No testimonials yet. Be the first to share your experience!</p>
+    </div>
+</div>
+{% endfor %}

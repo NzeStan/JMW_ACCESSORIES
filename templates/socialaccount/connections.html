@@ -1,0 +1,58 @@
+{% extends "_base.html" %}
+{% load i18n %}
+
+{% block head_title %}{% trans "Account Connections" %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-md mx-auto bg-base-100 rounded-lg shadow-xl p-8">
+        <div class="text-center mb-8">
+            <img src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1721420288/Black_White_Minimalist_Clothes_Store_Logo_e1o8ow.png" 
+                 alt="Logo" 
+                 class="mx-auto w-32 mb-4">
+            <h1 class="text-2xl font-bold">{% trans "Account Connections" %}</h1>
+            <p class="text-base-content/70 mt-2">
+                {% if form.accounts %}
+                    {% blocktrans %}You can sign in to your account using any of the following third-party accounts:{% endblocktrans %}
+                {% else %}
+                    {% blocktrans %}You currently have no social network accounts connected to this account.{% endblocktrans %}
+                {% endif %}
+            </p>
+        </div>
+
+        {% if form.accounts %}
+        <form method="post" action="{% url 'socialaccount_connections' %}">
+            {% csrf_token %}
+
+            <div class="space-y-4">
+                {% for base_account in form.accounts %}
+                {% with base_account.get_provider_account as account %}
+                <div class="flex items-center justify-between p-4 bg-base-200 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <input type="radio" name="account" value="{{ base_account.id }}" class="radio radio-primary"/>
+                        <div>
+                            <span class="font-medium">{{ account.get_brand.name }}</span>
+                            <p class="text-sm text-base-content/70">{{ account }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
+
+            <div class="flex justify-center mt-6">
+                <button type="submit" class="btn btn-error">{% trans 'Remove' %}</button>
+            </div>
+        </form>
+        {% endif %}
+
+        <div class="divider">{% trans "Add a third-party account" %}</div>
+
+        <div class="grid grid-cols-2 gap-4">
+            {% include "socialaccount/snippets/provider_list.html" with process="connect" %}
+        </div>
+
+        {% include "socialaccount/snippets/login_extra.html" %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,225 @@
+{% extends "_base.html" %}
+{% load custom_filters %}
+{% block title %}Home{% endblock title %}
+
+{% block content %}
+<!-- Hero Section with Improved Background -->
+<div class="hero min-h-screen relative">
+    <div class="hero-bg absolute inset-0">
+        <img src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1737849375/Untitled_design_1_gz4ofr.png" 
+             alt="JMW Hero background" 
+             class="w-full h-full object-cover">
+    </div>
+    <div class="hero-overlay bg-opacity-60"></div>
+    <div class="hero-content text-neutral-content text-center z-10">
+        <div class="max-w-md">
+            <h1 class="mb-5 text-5xl font-bold">Elevate Your Style</h1>
+            <p class="mb-5">
+                Discover our latest collection of premium clothing designed for those who dare to stand out. Crafted with passion, worn with confidence.
+            </p>
+            <div class="flex gap-4 justify-center">
+                <a href="{% url 'products:product_list' %}" class="btn btn-primary">SHOP NOW</a>
+                <a href="{% url 'bulk_orders:generate' %}" class="btn btn-secondary">CUSTOM LINK</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<section class="py-16 bg-base-100">
+    <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">Why Choose Us</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="card bg-base-200">
+                <div class="card-body items-center text-center">
+                    <i class="fas fa-shipping-fast text-4xl mb-4"></i>
+                    <h3 class="card-title">Fast Delivery</h3>
+                    <p>Prompt shipping on all orders Nationwide</p>
+                </div>
+            </div>
+            <div class="card bg-base-200">
+                <div class="card-body items-center text-center">
+                    <i class="fas fa-medal text-4xl mb-4"></i>
+                    <h3 class="card-title">Quality Guarantee</h3>
+                    <p>Premium materials and craftsmanship</p>
+                </div>
+            </div>
+            <div class="card bg-base-200">
+                <div class="card-body items-center text-center">
+                    <i class="fas fa-headset text-4xl mb-4"></i>
+                    <h3 class="card-title">24/7 Support</h3>
+                    <p>Dedicated customer service team ready to help</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Video Section -->
+<section class="py-8">
+    <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">{{video_message.title}}</h2>
+        <div class="max-w-4xl mx-auto">
+            <div style="aspect-ratio: 16/9;" class="relative">
+                <iframe 
+                    class="w-full h-full absolute top-0 left-0 rounded-lg shadow-lg"
+                    src="{{video_message.video}}"
+                    title="Hear from our director"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Gallery Section -->
+<section class="py-8">
+    <div class="container mx-auto px-4">
+        <div class="space-y-6 mb-6">
+            <!-- Main featured image with enhanced effects -->
+            <div class="flex justify-center">
+                <div class="relative group">
+                    <img 
+                        class="w-full max-w-4xl h-auto rounded-xl object-cover shadow-2xl transition-all duration-300 hover:scale-[1.01] hover:shadow-primary/20"
+                        src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1685717649/hood_pics/1_sl94fi.jpg" 
+                        alt="Featured image"
+                    >
+                    <!-- Subtle overlay on hover -->
+                    <div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 bg-gradient-to-t from-base-300/20 to-transparent transition-opacity duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Enhanced thumbnail grid -->
+            <div class="grid grid-cols-5 gap-6 max-w-4xl mx-auto">
+                <!-- Thumbnail 1 -->
+                <div class="relative group overflow-hidden">
+                    <img 
+                        class="h-auto w-full rounded-lg object-cover shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/10"
+                        src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1687358527/hood_pics/61_dhxj6f.jpg" 
+                        alt="Thumbnail 1"
+                    >
+                    <div class="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 bg-gradient-to-t from-base-300/30 to-transparent transition-opacity duration-300"></div>
+                </div>
+
+                <!-- Thumbnail 2 -->
+                <div class="relative group overflow-hidden">
+                    <img 
+                        class="h-auto w-full rounded-lg object-cover shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/10"
+                        src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1685717651/hood_pics/3_mwfdes.jpg" 
+                        alt="Thumbnail 2"
+                    >
+                    <div class="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 bg-gradient-to-t from-base-300/30 to-transparent transition-opacity duration-300"></div>
+                </div>
+
+                <!-- Thumbnail 3 -->
+                <div class="relative group overflow-hidden">
+                    <img 
+                        class="h-auto w-full rounded-lg object-cover shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/10"
+                        src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1686407057/jume_others/46_uhpdya.jpg" 
+                        alt="Thumbnail 3"
+                    >
+                    <div class="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 bg-gradient-to-t from-base-300/30 to-transparent transition-opacity duration-300"></div>
+                </div>
+
+                <!-- Thumbnail 4 -->
+                <div class="relative group overflow-hidden">
+                    <img 
+                        class="h-auto w-full rounded-lg object-cover shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/10"
+                        src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1686076261/jume_others/15_b0mtk9.jpg" 
+                        alt="Thumbnail 4"
+                    >
+                    <div class="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 bg-gradient-to-t from-base-300/30 to-transparent transition-opacity duration-300"></div>
+                </div>
+
+                <!-- Thumbnail 5 -->
+                <div class="relative group overflow-hidden">
+                    <img 
+                        class="h-auto w-full rounded-lg object-cover shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/10"
+                        src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1686076261/jume_others/16_x3jqi2.jpg" 
+                        alt="Thumbnail 5"
+                    >
+                    <div class="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 bg-gradient-to-t from-base-300/30 to-transparent transition-opacity duration-300"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="py-8">
+    <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">What Our Customers Say</h2>
+        
+        {% if user.is_authenticated and not user_testimonial %}
+        <!-- Add Testimonial Form -->
+        <div class="max-w-xl mx-auto mb-12">
+            <form method="post" action="{% url 'pages:create_testimonial' %}" id="testimonialForm" class="space-y-4">
+                {% csrf_token %}
+                {{ testimonial_form.name }}
+                <div class="rating rating-lg flex justify-center gap-2 mb-4">
+                    {% for i in "12345" %}
+                    <input type="radio" name="rating" value="{{ i }}" class="mask mask-star-2 bg-orange-400" required />
+                    {% endfor %}
+                </div>
+                {{ testimonial_form.comment }}
+                <button type="submit" class="btn btn-primary w-full">Share Your Experience</button>
+            </form>
+        </div>
+        {% endif %}
+        <!-- Testimonials Grid -->
+        <div id="testimonials-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% include "pages/partials/testimonial_list.html" %}
+        </div>
+
+        <!-- Toggle Button -->
+        {% if has_more %}
+        <div class="text-center mt-8">
+            <button 
+                id="toggleButton"
+                class="btn btn-outline"
+                onclick="toggleTestimonials()"
+            >
+                Load More Reviews
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<script>
+    let showingMore = false;
+
+    function toggleTestimonials() {
+        showingMore = !showingMore;
+        
+        fetch(`{% url 'pages:toggle_testimonials' %}?show_more=${showingMore}`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('testimonials-grid').innerHTML = html;
+                updateButtonText();
+            });
+    }
+
+    function updateButtonText() {
+        const button = document.getElementById('toggleButton');
+        button.textContent = showingMore ? 'Show Less Reviews' : 'Load More Reviews';
+    }
+
+    // Clear form after submission
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('testimonialForm');
+        if (form) {
+            form.addEventListener('submit', function() {
+                setTimeout(() => {
+                    form.reset();
+                    const stars = form.querySelectorAll('.rating input');
+                    stars.forEach(star => star.checked = false);
+                }, 100);
+            });
+        }
+    });
+</script>
+
+{% endblock content %}

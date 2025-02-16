@@ -1,0 +1,4 @@
+INFO 2025-02-15 21:50:34,121 __init__ 141 125228575360768 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-15 21:50:43,846 __init__ 141 125228627789568 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-15 23:32:00,289 __init__ 141 125228617303808 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-15 23:32:05,003 __init__ 141 125228193679104 file_cache is only supported with oauth2client<4.0.0

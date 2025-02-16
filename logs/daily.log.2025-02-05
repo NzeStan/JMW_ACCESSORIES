@@ -1,0 +1,55 @@
+INFO 2025-02-05 11:51:01,292 middleware 2835 138176368740096 Feeds request: /feeds/ [GET]
+INFO 2025-02-05 11:51:01,294 __init__ 2835 138176368740096 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 11:51:01,308 middleware 2835 138176368740096 Feeds response: 200
+INFO 2025-02-05 11:51:11,555 middleware 2835 138176368740096 Feeds request: /feeds/load-more/ [GET]
+INFO 2025-02-05 11:51:11,556 __init__ 2835 138176368740096 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 11:51:11,566 middleware 2835 138176368740096 Feeds response: 200
+INFO 2025-02-05 18:55:21,528 __init__ 138 133971828541184 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 18:55:21,551 youtube_service 138 133971828541184 Returning 21 videos from cache
+INFO 2025-02-05 20:35:40,917 __init__ 138 127943216989952 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:35:40,928 youtube_service 138 127943216989952 Returning 21 videos from cache
+INFO 2025-02-05 20:35:41,356 __init__ 138 127943248447232 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:35:41,394 youtube_service 138 127943248447232 Returning 21 videos from cache
+INFO 2025-02-05 20:37:45,847 __init__ 138 127943248447232 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:37:45,852 youtube_service 138 127943248447232 Returning 21 videos from cache
+INFO 2025-02-05 20:37:46,282 __init__ 138 127943248447232 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:37:46,290 youtube_service 138 127943248447232 Returning 21 videos from cache
+INFO 2025-02-05 20:40:42,199 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:40:42,207 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 20:40:43,895 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:40:43,915 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 20:41:28,400 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:41:28,405 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 20:41:31,566 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:41:31,573 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 20:42:21,798 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:42:21,802 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 20:42:22,814 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:42:22,828 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 20:58:25,823 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:58:25,828 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 20:58:30,502 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:58:30,512 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 20:59:30,574 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:59:30,580 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 20:59:32,850 __init__ 138 127943237961472 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 20:59:32,859 youtube_service 138 127943237961472 Returning 21 videos from cache
+INFO 2025-02-05 21:03:52,745 __init__ 138 138532211394304 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 21:03:52,754 youtube_service 138 138532211394304 Returning 21 videos from cache
+INFO 2025-02-05 21:03:54,317 __init__ 138 138532211394304 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 21:03:54,325 youtube_service 138 138532211394304 Returning 21 videos from cache
+INFO 2025-02-05 21:06:46,772 __init__ 138 138532211394304 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 21:06:46,777 youtube_service 138 138532211394304 Fetching fresh videos from YouTube API
+INFO 2025-02-05 21:06:46,777 youtube_service 138 138532211394304 Making API call #1
+INFO 2025-02-05 21:06:47,538 youtube_service 138 138532211394304 Received 22 videos in this page
+INFO 2025-02-05 21:06:47,569 youtube_service 138 138532211394304 No more pages available
+INFO 2025-02-05 21:06:47,570 youtube_service 138 138532211394304 Total videos fetched from API: 22
+INFO 2025-02-05 21:06:47,571 youtube_service 138 138532211394304 Updating cache with 22 videos
+INFO 2025-02-05 21:06:59,186 __init__ 138 138532211394304 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 21:06:59,192 youtube_service 138 138532211394304 Returning 22 videos from cache
+INFO 2025-02-05 21:07:00,677 __init__ 138 138532179937024 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 21:07:00,704 youtube_service 138 138532179937024 Returning 22 videos from cache
+INFO 2025-02-05 21:10:11,626 __init__ 138 138532179937024 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 21:10:11,632 youtube_service 138 138532179937024 Returning 22 videos from cache
+INFO 2025-02-05 21:10:12,752 __init__ 138 138532169451264 file_cache is only supported with oauth2client<4.0.0
+INFO 2025-02-05 21:10:12,765 youtube_service 138 138532169451264 Returning 22 videos from cache

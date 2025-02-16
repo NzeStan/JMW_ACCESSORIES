@@ -1,0 +1,279 @@
+{% extends "_base.html" %}
+
+{% block title %}Shopping Cart{% endblock title %}
+
+{% block content %}
+<!-- DESKTOP VIEW -->
+<div class="hidden lg:block">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Your Shopping Cart</h1>
+
+        {% if cart|length > 0 %}
+            {# Group cart items by product type #}
+            {% regroup cart|dictsort:"product.product_type" by product.product_type as product_groups %}
+            
+            {% for group in product_groups %}
+                <div class="card bg-base-100 shadow-xl mb-8">
+                    <div class="card-body">
+                        <h2 class="card-title">
+                            {% if group.grouper == 'nysc_kit' %}
+                                NYSC Kit Items
+                            {% elif group.grouper == 'nysc_tour' %}
+                                NYSC Tour Services
+                            {% else %}
+                                Church Merchandise
+                            {% endif %}
+                        </h2>
+
+                        <div class="overflow-x-auto">
+                            <table class="table table-zebra w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Item Details</th>
+                                        <th>Options</th>
+                                        <th>Unit Price</th>
+                                        <th>Quantity</th>
+                                        <th>Total</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in group.list %}
+                                        <tr>
+                                            <td class="min-w-[300px]">
+                                                <div class="flex items-start gap-4">
+                                                    {% if item.product.image %}
+                                                        <div class="avatar">
+                                                            <div class="w-20 h-20 rounded">
+                                                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                    
+                                                    <div>
+                                                        <a href="{{ item.product.get_absolute_url }}" 
+                                                           class="font-semibold hover:text-primary">
+                                                            {{ item.product.name }}
+                                                        </a>
+                                                        
+                                                        <div class="{{ item.product.display_status.badge_class }} mt-2">
+                                                            {{ item.product.display_status.text }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if item.extra_fields %}
+                                                    <div class="text-sm">
+                                                        {% if item.extra_fields.size %}
+                                                            <p>Size: {{ item.extra_fields.size }}</p>
+                                                        {% endif %}
+                                                        {% if item.extra_fields.call_up_number %}
+                                                            <p>Call-up Number: {{ item.extra_fields.call_up_number }}</p>
+                                                        {% endif %}
+                                                        {% if item.extra_fields.custom_name_text %}
+                                                            <p>Custom Name: {{ item.extra_fields.custom_name_text }}</p>
+                                                        {% endif %}
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td>N{{ item.price }}</td>
+                                            <td>
+                                                <div class="form-control">
+                                                    <form method="post" action="{% url 'cart:update_quantity' item.product.product_type item.product.id %}">
+                                                        {% csrf_token %}
+                                                        <select name="quantity" 
+                                                                class="select select-bordered w-full max-w-xs"
+                                                                onchange="this.form.submit()">
+                                                            {% with ''|center:50 as range %}
+                                                                {% for i in range %}
+                                                                    <option value="{{ forloop.counter }}" {% if item.quantity == forloop.counter %}selected{% endif %}>
+                                                                        {{ forloop.counter }}
+                                                                    </option>
+                                                                {% endfor %}
+                                                                {% endwith %}
+                                                        </select>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                            <td>N{{ item.total_price }}</td>
+                                            <td>
+                                                <form method="post" action="{% url 'cart:cart_remove' item.product.product_type item.product.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-ghost btn-sm text-error">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+            {# Cart Summary Section #}
+            <div class="flex justify-between items-start gap-8 mt-8">
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-title">Total Items</div>
+                        <div class="stat-value">{{ cart|length }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-title">Total Amount</div>
+                        <div class="stat-value text-primary">N{{ cart.get_total_price }}</div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <a href="{% url 'products:product_list' %}" class="btn btn-outline">
+                        Continue Shopping
+                    </a>
+                    <form method="post" action="{% url 'cart:cart_clear' %}"
+                          onsubmit="return confirm('Are you sure you want to clear your cart?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-error btn-outline">
+                            Clear Cart
+                        </button>
+                    </form>
+                    <a href="{% url 'order:checkout' %}" class="btn btn-primary">
+                        Proceed to Checkout
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="hero bg-base-200 rounded-lg">
+                <div class="hero-content text-center">
+                    <div class="max-w-md">
+                        <h2 class="text-2xl font-bold mb-4">Your cart is empty</h2>
+                        <p class="mb-6">Start adding some amazing products to your cart!</p>
+                        <a href="{% url 'products:product_list' %}" class="btn btn-primary">
+                            Start Shopping
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MOBILE VIEW -->
+<div class="block lg:hidden">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Your Shopping Cart</h1>
+
+        {% if cart|length > 0 %}
+            {% regroup cart|dictsort:"product.product_type" by product.product_type as product_groups %}
+            
+            {% for group in product_groups %}
+                <div class="card bg-base-100 shadow-xl mb-8">
+                    <div class="card-body p-4">
+                        <h2 class="card-title text-lg mb-4">
+                            {% if group.grouper == 'nysc_kit' %}
+                                NYSC Kit Items
+                            {% elif group.grouper == 'nysc_tour' %}
+                                NYSC Tour Services
+                            {% else %}
+                                Church Merchandise
+                            {% endif %}
+                        </h2>
+
+                        <div class="space-y-6">
+                            {% for item in group.list %}
+                                <div class="card bg-base-200">
+                                    <div class="card-body p-4">
+                                        <div class="flex gap-4">
+                                            {% if item.product.image %}
+                                                <div class="avatar">
+                                                    <div class="w-16 h-16 rounded">
+                                                        <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <div class="flex-1">
+                                                <a href="{{ item.product.get_absolute_url }}" 
+                                                   class="font-semibold hover:text-primary text-sm">
+                                                    {{ item.product.name }}
+                                                </a>
+                                                
+                                                <div class="{{ item.product.display_status.badge_class }} mt-2 text-xs">
+                                                    {{ item.product.display_status.text }}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {% include "cart/_product_options.html" %}
+
+                                        <div class="flex justify-between items-center mt-4">
+                                            <div class="text-sm">
+                                                <p>Price: N{{ item.price }}</p>
+                                                <p class="font-semibold">Total: N{{ item.total_price }}</p>
+                                            </div>
+                                            
+                                            <div class="flex gap-2 items-center">
+                                                {% include "cart/_quantity_selector.html" %}
+                                                {% include "cart/_remove_button.html" %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <!-- Mobile Summary -->
+            <div class="space-y-6 mt-8">
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-sm text-gray-600">Total Items</div>
+                                <div class="text-xl font-bold">{{ cart|length }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Total Amount</div>
+                                <div class="text-xl font-bold text-primary">N{{ cart.get_total_price }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <a href="{% url 'products:product_list' %}" class="btn btn-outline w-full">
+                        Continue Shopping
+                    </a>
+                    <form method="post" action="{% url 'cart:cart_clear' %}"
+                          onsubmit="return confirm('Are you sure you want to clear your cart?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-error btn-outline w-full">
+                            Clear Cart
+                        </button>
+                    </form>
+                    <a href="{% url 'order:checkout' %}" class="btn btn-primary w-full">
+                        Proceed to Checkout
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="hero bg-base-200 rounded-lg">
+                <div class="hero-content text-center">
+                    <div class="max-w-md">
+                        <h2 class="text-xl font-bold mb-4">Your cart is empty</h2>
+                        <p class="mb-6">Start adding some amazing products to your cart!</p>
+                        <a href="{% url 'products:product_list' %}" class="btn btn-primary">
+                            Start Shopping
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

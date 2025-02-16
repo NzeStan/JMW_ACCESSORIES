@@ -1,0 +1,266 @@
+{% extends "_base.html" %}
+{% load static %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Checkout Form -->
+        <div class="lg:col-span-2">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title text-2xl mb-6">Checkout Details</h2>
+                    
+                    <form method="post" id="checkout-form" class="space-y-6">
+                        {% csrf_token %}
+                        
+                        <!-- Base Order Details -->
+                        <div class="space-y-4">
+                            <h3 class="text-xl font-semibold">Personal Information</h3>
+                            
+                            <!-- Base form fields remain the same -->
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">First Name</span>
+                                </label>
+                                {{ base_form.first_name }}
+                                {% if base_form.first_name.errors %}
+                                    <div class="text-error text-sm mt-1">
+                                        {{ base_form.first_name.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Middle Name (Optional)</span>
+                                </label>
+                                {{ base_form.middle_name }}
+                                {% if base_form.middle_name.errors %}
+                                    <div class="text-error text-sm mt-1">
+                                        {{ base_form.middle_name.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Last Name</span>
+                                </label>
+                                {{ base_form.last_name }}
+                                {% if base_form.last_name.errors %}
+                                    <div class="text-error text-sm mt-1">
+                                        {{ base_form.last_name.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Email</span>
+                                </label>
+                                <input type="email" value="{{ request.user.email }}" class="input input-bordered" readonly />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Phone Number</span>
+                                </label>
+                                {{ base_form.phone_number }}
+                                {% if base_form.phone_number.errors %}
+                                    <div class="text-error text-sm mt-1">
+                                        {{ base_form.phone_number.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                        </div>
+
+                        <!-- NYSC Kit Order Details -->
+                        {% if 'NyscKit' in grouped_items %}
+                        <div class="divider"></div>
+                        <div class="space-y-4">
+                            <h3 class="text-xl font-semibold">NYSC Kit Details</h3>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">State Code</span>
+                                </label>
+                                <input type="text" name="state_code" 
+                                    class="input input-bordered w-full uppercase" 
+                                    placeholder="AB/22C/1234"
+                                    value="{{ order_forms.NyscKit.state_code.value|default:'' }}">
+                                {% if order_forms.NyscKit.state_code.errors %}
+                                    <div class="text-error text-sm mt-1">
+                                        {{ order_forms.NyscKit.state_code.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">State</span>
+                                </label>
+                                <select name="state" class="select select-bordered w-full" id="nysc-state">
+                                    <option value="">Select State</option>
+                                    {% for state, name in order_forms.NyscKit.fields.state.choices %}
+                                        {% if state %}
+                                            <option value="{{ state }}" {% if order_forms.NyscKit.state.value == state %}selected{% endif %}>{{ name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                {% if order_forms.NyscKit.state.errors %}
+                                    <div class="text-error text-sm mt-1">
+                                        {{ order_forms.NyscKit.state.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Local Government</span>
+                                </label>
+                                <select name="local_government" class="select select-bordered w-full" id="nysc-lga">
+                                    <option value="">Select State First</option>
+                                </select>
+                                {% if order_forms.NyscKit.local_government.errors %}
+                                    <div class="text-error text-sm mt-1">
+                                        {{ order_forms.NyscKit.local_government.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Church Order Details -->
+                        {% if 'Church' in grouped_items %}
+                        <div class="divider"></div>
+                        <div class="space-y-4">
+                            <h3 class="text-xl font-semibold">Church Merchandise Details</h3>
+                            
+                            <div class="form-control">
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <span class="label-text">Pickup in Camp</span>
+                                    <input type="checkbox" 
+                                        name="pickup_on_camp" 
+                                        id="pickup-toggle"
+                                        class="checkbox checkbox-primary" 
+                                        {% if order_forms.Church.pickup_on_camp.value %}checked{% endif %}>
+                                </label>
+                                {% if order_forms.Church.pickup_on_camp.errors %}
+                                    <div class="text-error text-sm mt-1">
+                                        {{ order_forms.Church.pickup_on_camp.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div id="delivery-fields" class="hidden space-y-4">
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">Delivery State</span>
+                                    </label>
+                                    <select name="delivery_state" id="church-state" class="select select-bordered w-full">
+                                        <option value="">Select State</option>
+                                        {% for state, _ in order_forms.Church.fields.delivery_state.choices %}
+                                            {% if state %}
+                                                <option value="{{ state }}" {% if order_forms.Church.delivery_state.value == state %}selected{% endif %}>{{ state }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    {% if order_forms.Church.delivery_state.errors %}
+                                        <div class="text-error text-sm mt-1">
+                                            {{ order_forms.Church.delivery_state.errors|join:", " }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">Delivery LGA</span>
+                                    </label>
+                                    <select name="delivery_lga" id="church-lga" class="select select-bordered w-full">
+                                        <option value="">Select LGA</option>
+                                    </select>
+                                    {% if order_forms.Church.delivery_lga.errors %}
+                                        <div class="text-error text-sm mt-1">
+                                            {{ order_forms.Church.delivery_lga.errors|join:", " }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="card-actions justify-end mt-6">
+                            <button type="submit" id="checkout-button" class="btn btn-primary">
+                                Proceed to Payment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Summary section -->
+        <div class="lg:col-span-1">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title text-2xl mb-6">Order Summary</h2>
+                    
+                    {% for product_type, items in grouped_items.items %}
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold">{{ product_type }} Items</h3>
+                        {% for item in items %}
+                        <div class="flex justify-between items-start gap-4">
+                            <div class="flex-1">
+                                <p class="font-medium">{{ item.product.name }}</p>
+                                <p class="text-sm text-gray-600">
+                                    Quantity: {{ item.quantity }}
+                                </p>
+                                {% if item.extra_fields %}
+                                    <div class="text-sm">
+                                        {% if item.extra_fields.size %}
+                                            <p>Size: {{ item.extra_fields.size }}</p>
+                                        {% endif %}
+                                        {% if item.extra_fields.call_up_number %}
+                                            <p>Call-up Number: {{ item.extra_fields.call_up_number }}</p>
+                                        {% endif %}
+                                        {% if item.extra_fields.custom_name_text %}
+                                            <p>Custom Name: {{ item.extra_fields.custom_name_text }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="min-w-[100px] text-right">
+                                <p class="font-medium whitespace-nowrap">₦{{ item.total_price }}</p>
+                            </div>
+                        </div>
+                        {% if not forloop.last %}
+                        <div class="divider my-2"></div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% if not forloop.last %}
+                    <div class="divider"></div>
+                    {% endif %}
+                    {% endfor %}
+
+                    <div class="divider"></div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg font-semibold">Total</span>
+                        <span class="text-lg font-bold">₦{{ cart.get_total_price }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('checkout-form').addEventListener('submit', function(e) {
+    const submitButton = this.querySelector('button[type="submit"]');
+    submitButton.disabled = true;  // Prevent double submission
+    // Let the form submit normally - no preventDefault()
+});
+</script>
+{% endblock %}

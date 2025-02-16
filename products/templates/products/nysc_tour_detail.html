@@ -1,0 +1,21 @@
+{# templates/products/nysc_tour_detail.html #}
+{% extends "products/base_detail.html" %}
+
+{% block product_specific_form_fields %}
+<div class="form-control w-full max-w-xs">
+    <label class="label">
+        <span class="label-text">NYSC Call-up Number</span>
+        <span class="label-text-alt text-primary">Required</span>
+    </label>
+    <input type="text" 
+           name="call_up_number" 
+           class="input input-bordered" 
+           placeholder="NYSC/2021/A/AB/1234"
+           pattern="^[A-Za-z0-9/]+$"
+           title="Please enter a valid call-up number using only letters, numbers, and forward slashes"
+           required>
+    <label class="label">
+        <span class="label-text-alt">Format: NYSC/YEAR/BATCH/STATE/NUMBER</span>
+    </label>
+</div>
+{% endblock %}

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Receipt - {{ order.id }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .receipt {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .divider {
+            border-top: 2px solid #eee;
+            margin: 20px 0;
+        }
+        .order-info {
+            margin-bottom: 30px;
+        }
+        .order-details {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .order-details th,
+        .order-details td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 50px;
+        }
+        .payment-stamp {
+            position: absolute;
+            bottom: 100px;
+            right: 30px;
+            transform: rotate(-15deg);
+            font-size: 24px;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: 5px solid;
+            border-radius: 10px;
+            text-transform: uppercase;
+        }
+        .stamp-paid {
+            color: #28a745;
+            border-color: #28a745;
+        }
+        .stamp-unpaid {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="header">
+            <div><img src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1721420288/Black_White_Minimalist_Clothes_Store_Logo_e1o8ow.png" alt="JMW Logo" class="logo"></div>
+            <div class="company-name">{{ company_name }}</div>
+            <div>{{ company_address }}</div>
+            <div>Tel: {{ company_phone }}</div>
+            <div>Email: {{ company_email }}</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="order-info">
+            <h2>Receipt</h2>
+            <p><strong>S/N:</strong> {{ forloop.counter }}</p>
+            <p><strong>Date:</strong> {{ order.created_at|date:"F d, Y" }}</p>
+            <p><strong>Customer Name:</strong> {{ order.full_name }}</p>
+            <p><strong>Email:</strong> {{ order.email }}</p>
+        </div>
+
+        <table class="order-details">
+            <tr>
+                <th>Item</th>
+                <th>Size</th>
+                <th>Amount</th>
+            </tr>
+            <tr>
+                <td>{{ bulk_order.organization_name }} Order</td>
+                <td>{{ order.size }}</td>
+                <td>₦{{ bulk_order.price_per_item }}</td>
+            </tr>
+            {% if order.custom_name %}
+            <tr>
+                <td colspan="3">Custom Name: {{ order.custom_name }}</td>
+            </tr>
+            {% endif %}
+            {% if order.coupon_used %}
+            <tr>
+                <td colspan="2">Coupon Applied</td>
+                <td>FREE</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        {% if order.paid %}
+            <div class="payment-stamp stamp-paid">✅ PAID</div>
+        {% else %}
+            <div class="payment-stamp stamp-unpaid">❌ UNPAID</div>
+        {% endif %}
+
+        <div class="footer">
+            <p>Thank you for your order!</p>
+            <p>This is a computer-generated receipt and requires no signature.</p>
+        </div>
+    </div>
+
+</body>
+</html>

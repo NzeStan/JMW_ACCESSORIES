@@ -1,0 +1,47 @@
+{% extends "products/base_detail.html" %}
+
+{% block product_specific_details %}
+<div class="stats bg-base-200 shadow">
+    <div class="stat">
+        <div class="stat-title">Church</div>
+        <div class="stat-value text-lg">{{ product.get_church_display }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block product_specific_form_fields %}
+<div class="form-control w-full max-w-xs">
+    <label class="label">
+        <span class="label-text">Select Size</span>
+        <span class="label-text-alt text-primary">Required</span>
+    </label>
+    <select class="select select-bordered" name="size" required>
+    <option value="">Choose a size</option>
+    {% for size_code, size_name in clothes_sizes %}
+        <option value="{{ size_code }}">{{ size_name }}</option>
+    {% endfor %}
+</select>
+</div>
+
+<div class="form-control">
+    <div class="flex items-center gap-2">
+        <span class="label-text">Add Custom Name</span>
+        <input type="checkbox" 
+               name="custom_name" 
+               class="checkbox checkbox-primary" 
+               value="true">
+    </div>
+</div>
+
+<div id="customNameField" class="form-control w-full max-w-xs hidden">
+    <label class="label">
+        <span class="label-text">Enter Custom Name</span>
+    </label>
+    <input type="text" 
+           name="custom_name_text" 
+           class="input input-bordered" 
+           placeholder="Enter name to be printed"
+           maxlength="50">
+</div>
+
+{% endblock %}

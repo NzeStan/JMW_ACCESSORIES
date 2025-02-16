@@ -1,0 +1,112 @@
+{% extends "_base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header Section with Title and RSS Feed -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold mb-4 md:mb-0">{{ title }}</h1>
+        <div class="flex gap-2">
+            <a href="{% url 'blog:post_feed_rss' %}" class="btn btn-sm btn-outline gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/>
+                </svg>
+                RSS
+            </a>
+            <a href="{% url 'blog:post_feed_atom' %}" class="btn btn-sm btn-outline gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/>
+                </svg>
+                Atom
+            </a>
+        </div>
+    </div>
+    
+    <!-- Blog Posts Grid -->
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {% for post in posts %}
+            <article class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+                
+                    <figure class="relative overflow-hidden aspect-video">
+                        <img 
+                            src="{% if post.image %}{{ post.image.url }}{% else %}https://res.cloudinary.com/dhhaiy58r/image/upload/v1737477297/neatnysclogo_touffj.png{% endif %}" 
+                            alt="{{ post.title }}"
+                            class="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
+                            loading="lazy"
+                            onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%25\' height=\'100%25\' viewBox=\'0 0 16 9\'%3E%3Crect fill=\'%23cccccc\' width=\'16\' height=\'9\'/%3E%3C/svg%3E';"
+                        >
+                        <div class="absolute inset-0 bg-gradient-to-t from-base-300/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    </figure>
+                
+                
+                <div class="card-body">
+                    <h2 class="card-title">
+                        <a href="{{ post.get_absolute_url }}" class="hover:text-primary">
+                            {{ post.title }}
+                        </a>
+                    </h2>
+                    
+                    <!-- Author and Date Info -->
+                    <div class="flex items-center gap-2 text-sm text-base-content/70">
+                        <div class="avatar">
+                            <div class="w-8 rounded-full">
+                                {% if post.author.profile_image %}
+                                    <img src="{{ post.author.profile_image.url }}" alt="{{ post.author.get_full_name }}">
+                                {% else %}
+                                    <div class="bg-primary text-primary-content grid place-items-center">
+                                        {{ post.author.get_full_name|make_list|first }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <span class="font-medium">{{ post.author }}</span>
+                            <div>{{ post.published_date|date:"F j, Y" }}</div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-base-content/80 mt-4">
+                        {{ post.content|truncatewords:30 }}
+                    </p>
+                    
+                    <div class="card-actions justify-end mt-4">
+                        <a href="{{ post.get_absolute_url }}" class="btn btn-primary btn-sm">
+                            Read more
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </article>
+        {% empty %}
+            <div class="col-span-full alert alert-info">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>No posts found.</span>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+        <div class="join flex justify-center mt-8">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="join-item btn btn-outline">
+                    «
+                </a>
+            {% endif %}
+            
+            <button class="join-item btn btn-outline">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </button>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="join-item btn btn-outline">
+                    »
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

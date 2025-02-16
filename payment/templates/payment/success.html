@@ -1,0 +1,30 @@
+{% extends "_base.html" %}
+
+{% block header %}{% endblock header %}
+
+{% block title %}Payment Successful{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-base-100">
+    <div class="card w-96 bg-base-100 shadow-xl">
+        <div class="card-body items-center text-center">
+            <div class="text-success mb-4">
+                <svg class="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            
+            <h2 class="card-title text-2xl mb-2">Payment Successful!</h2>
+            <p class="mb-4">Your payment has been processed successfully.</p>
+            <p class="text-sm mb-6">A receipt has been sent to your email.</p>
+            
+            <div class="card-actions">
+                <a href="{% url 'products:product_list' %}" class="btn btn-primary">
+                    Continue Shopping
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

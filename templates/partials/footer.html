@@ -1,0 +1,16 @@
+<footer class="footer footer-center bg-base-200 text-base-content rounded p-10">
+  <nav class="grid grid-cols-2 md:grid-flow-col gap-4 text-xs md:text-base">
+    <a href="{% url 'pages:about' %}" class="link link-hover whitespace-nowrap">About us</a>
+    <a href="{% url 'pages:contact' %}" class="link link-hover whitespace-nowrap">Contact</a>
+    <a href="{% url 'feed:feed' %}" class="link link-hover whitespace-nowrap">Feed</a>
+    <a href="{% url 'blog:post_list' %}" class="link link-hover whitespace-nowrap">NYSC Blog</a>
+    <a href="{% url 'bulk_orders:generate' %}" class="col-span-2 text-center link link-hover whitespace-nowrap">Custom Link</a>
+    <a href="{% url 'pages:dashboard' %}" class="col-span-2 text-center link link-hover whitespace-nowrap">Dashboard</a>
+  </nav>
+  <nav>
+    {% include 'social.html' %}
+  </nav>
+  <aside>
+    <p>Copyright © <span id="year"></span> - All right reserved by JMW & ACCESSORIES</p>
+  </aside>
+</footer>

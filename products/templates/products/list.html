@@ -1,0 +1,192 @@
+{% extends "_base.html" %}
+
+{% block title %}
+{% if category %}{{ category.name }}{% else %}Products{% endif %}
+{% endblock %}
+
+{% block content %}
+    <!-- Main container -->
+    <div class="container mx-auto">
+        <!-- Mobile Categories (horizontal scroll) -->
+        <div class="lg:hidden w-full overflow-x-auto pb-2 mb-4 scrollbar-hide">
+            <div class="flex gap-2 p-2 whitespace-nowrap">
+                <a href="{% url 'products:product_list' %}" 
+                   class="btn btn-sm {% if not category %}btn-primary{% else %}btn-ghost{% endif %}">
+                    All
+                </a>
+                {% for c in categories %}
+                    <a href="{{ c.get_absolute_url }}" 
+                       class="btn btn-sm {% if category and category.slug == c.slug %}btn-primary{% else %}btn-ghost{% endif %}">
+                        {{ c.name }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Desktop Layout -->
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Desktop Sidebar -->
+            <div class="hidden lg:block w-64 flex-shrink-0">
+                <div class="sticky top-4">
+                    <div class="card bg-base-100 shadow">
+                        <div class="card-body">
+                            <h3 class="card-title mb-4">Categories</h3>
+                            <ul class="menu bg-base-100">
+                                <li>
+                                    <a href="{% url 'products:product_list' %}" 
+                                       class="{% if not category %}active{% endif %}">
+                                        All
+                                    </a>
+                                </li>
+                                {% for c in categories %}
+                                    <li>
+                                        <a href="{{ c.get_absolute_url }}" 
+                                           class="{% if category and category.slug == c.slug %}active{% endif %}">
+                                            {{ c.name }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="flex-1">
+                <h1 class="text-2xl font-bold mb-8">
+                    {% if category %}{{ category.name }}{% else %}Products{% endif %}
+                </h1>
+
+                {% if nysc_kits %}
+                <section id="nysc-kit-section" class="mb-8 product-section" data-product-type="nysc_kit">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">NYSC Kits</h2>
+                        {% if has_more_kits %}
+                        <button class="btn btn-ghost btn-sm load-more-btn"
+                                hx-get="{% url 'products:load_more' %}?type=nysc_kit{% if category %}&category={{ category.slug }}{% endif %}&action=expand"
+                                hx-target="#nysc-kit-section"
+                                hx-swap="outerHTML"
+                                hx-indicator="#loading-indicator-kits">
+                            See more
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div id="nysc-kits-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {% for product in nysc_kits %}
+                            <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow product-card">
+                                <figure class="px-4 pt-4 product-image-container">
+                                    <img src="{% if product.image %}{{ product.image.url }}{% else %}https://cdn-icons-png.flaticon.com/512/8136/8136031.png{% endif %}"
+                                         alt="{{ product.name }}"
+                                         loading="lazy"
+                                         class="rounded-xl h-48 w-full object-cover product-image" />
+                                </figure>
+                                <div class="card-body p-4">
+                                    <h3 class="card-title text-sm">{{ product.name }}</h3>
+                                    <!--<p class="text-primary font-semibold">N{{ product.price }}</p>-->
+                                    <div class="card-actions justify-end">
+                                        <a href="{{ product.get_absolute_url }}" class="btn btn-primary btn-sm">View</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div id="loading-indicator-kits" class="htmx-indicator flex justify-center py-4">
+                        <span class="loading loading-spinner loading-md"></span>
+                    </div>
+                </section>
+                {% endif %}
+
+                {% if nysc_tours %}
+                <section id="nysc-tour-section" class="mb-8 product-section" data-product-type="nysc_tour">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">NYSC Tours</h2>
+                        {% if has_more_tours %}
+                        <button class="btn btn-ghost btn-sm load-more-btn"
+                                hx-get="{% url 'products:load_more' %}?type=nysc_tour{% if category %}&category={{ category.slug }}{% endif %}&action=expand"
+                                hx-target="#nysc-tour-section"
+                                hx-swap="outerHTML"
+                                hx-indicator="#loading-indicator-tours">
+                            See more
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div id="nysc-tours-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {% for product in nysc_tours %}
+                            <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow product-card">
+                                <figure class="px-4 pt-4 product-image-container">
+                                    <img src="{% if product.image %}{{ product.image.url }}{% else %}https://cdn-icons-png.flaticon.com/512/8136/8136031.png{% endif %}"
+                                         alt="{{ product.name }}"
+                                         loading="lazy"
+                                         class="rounded-xl h-48 w-full object-cover product-image" />
+                                </figure>
+                                <div class="card-body p-4">
+                                    <h3 class="card-title text-sm">{{ product.name }}</h3>
+                                    <!--<p class="text-primary font-semibold">N{{ product.price }}</p>-->
+                                    <div class="card-actions justify-end">
+                                        <a href="{{ product.get_absolute_url }}" class="btn btn-primary btn-sm">View</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div id="loading-indicator-tours" class="htmx-indicator flex justify-center py-4">
+                        <span class="loading loading-spinner loading-md"></span>
+                    </div>
+                </section>
+                {% endif %}
+
+                {% if churches %}
+                <section id="church-section" class="mb-8 product-section" data-product-type="church">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Churches</h2>
+                        {% if has_more_churches %}
+                        <button class="btn btn-ghost btn-sm load-more-btn"
+                                hx-get="{% url 'products:load_more' %}?type=church{% if category %}&category={{ category.slug }}{% endif %}&action=expand"
+                                hx-target="#church-section"
+                                hx-swap="outerHTML"
+                                hx-indicator="#loading-indicator-churches">
+                            See more
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div id="churches-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {% for product in churches %}
+                            <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow product-card">
+                                <figure class="px-4 pt-4 product-image-container">
+                                    <img src="{% if product.image %}{{ product.image.url }}{% else %}https://cdn-icons-png.flaticon.com/512/8136/8136031.png{% endif %}"
+                                         alt="{{ product.name }}"
+                                         loading="lazy"
+                                         class="rounded-xl h-48 w-full object-cover product-image" />
+                                </figure>
+                                <div class="card-body p-4">
+                                    <h3 class="card-title text-sm">{{ product.name }}</h3>
+                                    <!--<p class="text-primary font-semibold">N{{ product.price }}</p>-->
+                                    <div class="card-actions justify-end">
+                                        <a href="{{ product.get_absolute_url }}" class="btn btn-primary btn-sm">View</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div id="loading-indicator-churches" class="htmx-indicator flex justify-center py-4">
+                        <span class="loading loading-spinner loading-md"></span>
+                    </div>
+                </section>
+                {% endif %}
+
+                {% if not nysc_kits and not nysc_tours and not churches %}
+                <div class="flex flex-col items-center justify-center py-12">
+                    <div class="text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No products</h3>
+                        <p class="mt-1 text-sm text-gray-500">No products found in this category.</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock content %}

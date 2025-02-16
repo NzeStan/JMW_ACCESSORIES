@@ -1,0 +1,27 @@
+{% extends "_base.html" %}
+{% block title %}Sign Out{% endblock title %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-md mx-auto bg-base-100 rounded-lg shadow-xl p-8">
+        <div class="text-center mb-8">
+            <img src="https://res.cloudinary.com/dhhaiy58r/image/upload/v1721420288/Black_White_Minimalist_Clothes_Store_Logo_e1o8ow.png" 
+                 alt="Logo" 
+                 class="mx-auto w-32 mb-4">
+            <h1 class="text-2xl font-bold">Sign Out</h1>
+            <p class="text-base-content/70 mt-2">Are you sure you want to sign out?</p>
+        </div>
+
+        <form method="post" action="{% url 'account_logout' %}">
+            {% csrf_token %}
+            {% if redirect_field_value %}
+            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
+            {% endif %}
+            <button type="submit" class="btn btn-primary w-full">Sign Out</button>
+            <a href="{% url 'pages:home' %}" 
+               class="btn btn-ghost w-full mt-4">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock content %}

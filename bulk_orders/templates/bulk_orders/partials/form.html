@@ -1,0 +1,105 @@
+<!-- bulk_orders/partials/form.html -->
+<form hx-post="{% url 'bulk_orders:generate' %}" 
+      hx-target="#bulk-order-content"
+      hx-swap="innerHTML"
+      class="space-y-4">
+    {% csrf_token %}
+    
+    <div class="form-control w-full">
+        <label class="label">
+            <span class="label-text">Organization Name</span>
+        </label>
+        {{ form.organization_name }}
+        {% if form.organization_name.errors %}
+            <div class="text-error text-sm mt-1">
+                {{ form.organization_name.errors|join:", " }}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="form-control w-full">
+        <label class="label">
+            <span class="label-text">Price per Item</span>
+        </label>
+        {{ form.price_per_item }}
+        {% if form.price_per_item.errors %}
+            <div class="text-error text-sm mt-1">
+                {{ form.price_per_item.errors|join:", " }}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="form-control w-full">
+        <label class="label">
+            <span class="label-text">Payment Deadline</span>
+        </label>
+        {{ form.payment_deadline }}
+        {% if form.payment_deadline.errors %}
+            <div class="text-error text-sm mt-1">
+                {{ form.payment_deadline.errors|join:", " }}
+            </div>
+        {% endif %}
+    </div>
+
+   <div class="form-control">
+    <label class="label">
+        <span class="label-text pointer-events-none">Enable Custom Branding</span>
+        {{ form.custom_branding_enabled }}
+    </label>
+    {% if form.custom_branding_enabled.errors %}
+        <div class="text-error text-sm mt-1">
+            {{ form.custom_branding_enabled.errors|join:", " }}
+        </div>
+    {% endif %}
+</div>
+
+    <!-- Add non-field errors if any -->
+    {% if form.non_field_errors %}
+        <div class="alert alert-error">
+            {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const deadlineInput = document.querySelector('input[name="payment_deadline"]');
+            if (deadlineInput) {
+                // Get current datetime in local timezone
+                const now = new Date();
+                // Add one hour to ensure it's always in the future
+                now.setHours(now.getHours() + 1);
+                
+                // Format datetime for input (YYYY-MM-DDTHH:MM)
+                const formattedDateTime = now.getFullYear() + '-' +
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(now.getDate()).padStart(2, '0') + 'T' +
+                    String(now.getHours()).padStart(2, '0') + ':' +
+                    String(now.getMinutes()).padStart(2, '0');
+                
+                // Set minimum datetime
+                deadlineInput.setAttribute('min', formattedDateTime);
+                
+                // Add event listener to validate on change
+                deadlineInput.addEventListener('change', function() {
+                    const selectedDate = new Date(this.value);
+                    const currentDate = new Date();
+                    
+                    if (selectedDate <= currentDate) {
+                        this.setCustomValidity('Please select a future date and time');
+                        this.reportValidity();
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                });
+            }
+        });
+    </script>
+
+    <div class="card-actions justify-end mt-6">
+        <button type="submit" class="btn btn-primary">
+            Generate Link
+        </button>
+    </div>
+</form>

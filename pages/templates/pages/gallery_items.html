@@ -1,0 +1,32 @@
+{% for item in items %}
+    <div class="card bg-base-100 shadow-xl">
+        {% if item|isinstance:'GalleryImage' %}
+            <figure class="px-4 pt-4">
+                <img src="{{ item.image }}" alt="Gallery Image" class="rounded-xl object-cover h-64 w-full">
+            </figure>
+        {% else %}
+            <div class="px-4 pt-4">
+                <div class="aspect-video rounded-xl">
+                    <div id="player-{{ item.video_id }}" class="w-full h-full rounded-xl"
+                         data-video-id="{{ item.video_id }}"></div>
+                </div>
+            </div>
+        {% endif %}
+        
+        <div class="card-body pt-4">
+            <div class="card-actions justify-end">
+                <!-- Share Button -->
+                <button class="btn btn-circle btn-outline" onclick="shareContent('{{ item.image|default:item.video_id }}')">
+                    <i class="fas fa-share-alt"></i>
+                </button>
+                
+                <!-- WhatsApp Business Button -->
+                <a href="https://wa.me/2348139425458?text=Check%20out%20this%20content:%20{% if item|isinstance:'GalleryImage' %}{{ item.image }}{% else %}https://youtu.be/{{ item.video_id }}{% endif %}"
+                target="_blank"
+                class="btn btn-circle btn-success">
+                    <i class="fab fa-whatsapp text-white"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+{% endfor %}

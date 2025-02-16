@@ -1,0 +1,62 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Email Tracking Dashboard</h1>
+    
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-4 rounded shadow">
+            <h3 class="font-bold">Total Sends</h3>
+            <p class="text-2xl">{{ total_sends }}</p>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+            <h3 class="font-bold">Delivery Rate</h3>
+            <p class="text-2xl">{{ delivery_rate }}%</p>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+            <h3 class="font-bold">Bounce Rate</h3>
+            <p class="text-2xl">{{ bounce_rate }}%</p>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+            <h3 class="font-bold">Complaint Rate</h3>
+            <p class="text-2xl">{{ complaint_rate }}%</p>
+        </div>
+    </div>
+
+    <!-- Recent Events Table -->
+    <div class="bg-white rounded shadow p-4">
+        <h2 class="text-xl font-bold mb-4">Recent Events</h2>
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="text-left p-2">Time</th>
+                    <th class="text-left p-2">Type</th>
+                    <th class="text-left p-2">Recipient</th>
+                    <th class="text-left p-2">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in recent_events %}
+                <tr>
+                    <td class="p-2">{{ event.timestamp|date:"Y-m-d H:i:s" }}</td>
+                    <td class="p-2">{{ event.event_type }}</td>
+                    <td class="p-2">{{ event.recipient }}</td>
+                    <td class="p-2">
+                        {% if event.event_type == 'Delivery' %}
+                            <span class="text-green-600">✓ Delivered</span>
+                        {% elif event.event_type == 'Bounce' %}
+                            <span class="text-red-600">✗ Bounced</span>
+                        {% elif event.event_type == 'Complaint' %}
+                            <span class="text-orange-600">! Complaint</span>
+                        {% else %}
+                            {{ event.event_type }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

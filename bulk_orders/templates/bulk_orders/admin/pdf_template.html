@@ -1,0 +1,63 @@
+<!-- bulk_orders/templates/bulk_orders/admin/pdf_template.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: sans-serif; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f5f5f5; }
+        h1, h2 { color: #333; }
+        .summary { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>{{ bulk_order.organization_name }}</h1>
+    
+    <div class="summary">
+        <h2>Summary</h2>
+        <table>
+            <tr>
+                <th style="width: 50%">Size</th>
+                <th style="width: 50%">Count</th>
+            </tr>
+            {% for size in size_summary %}
+            <tr>
+                <td>{{ size.size }}</td>
+                <td>{{ size.count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <p>Total Orders: {{ total_orders }}</p>
+    </div>
+
+    <h2>Order Details</h2>
+    <table>
+    <tr>
+        <th>S/N</th> 
+        <th>Name</th>
+        <th>Size</th>
+        {% if bulk_order.custom_branding_enabled %}
+        <th>Custom Name</th>
+        {% endif %}
+        <!--<th>Status</th>-->
+    </tr>
+    {% for order in orders %}
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ order.full_name }}</td>
+        <td>{{ order.size }}</td>
+        {% if bulk_order.custom_branding_enabled %}
+        <td>{{ order.custom_name|default:'' }}</td>
+        {% endif %}
+        <!--<td>
+            {% if order.paid %}Paid
+            {% elif order.coupon_used %}Coupon
+            {% endif %}
+        </td>-->
+    </tr>
+    {% endfor %}
+</table>
+</body>
+</html>

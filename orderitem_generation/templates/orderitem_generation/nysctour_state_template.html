@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ state }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.3;
+            margin: 0;
+            padding: 0;
+        }
+        h1, h2 {
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 4px;
+            text-align: left;
+            font-size: 8pt;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .summary-footer td {
+            font-weight: bold;
+            background-color: #e6e6e6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>{{ state|upper }} - Order Details</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>S/N</th>
+                <th>Name</th>
+                <th>Call Up Number</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order_item in order_items %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{order_item.order.last_name|upper}} {{order_item.order.middle_name|upper}} {{order_item.order.first_name|upper}}</td>
+                <td>{{order_item.extra_fields.call_up_number}}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center;">No orders available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+
+</html>

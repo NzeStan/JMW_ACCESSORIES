@@ -1,0 +1,63 @@
+{% for item in content %}
+<div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow duration-300 mb-8">
+    <figure class="relative w-full {% if item.type == 'video' %}min-h-[300px] sm:min-h-[400px] md:min-h-[500px] lg:min-h-[600px]{% endif %}">
+        {% if item.type == 'image' %}
+            {% if item.active == True %}
+                <img src="{{ item.url }}" 
+                     alt="Feed Image" 
+                     class="w-full h-auto object-cover min-h-[300px] sm:min-h-[400px] md:min-h-[500px] lg:min-h-[600px]"
+                     loading="lazy"
+                     onload="this.style.opacity=1"
+                     onerror="handleImageError(this)"
+                     style="opacity: 0; transition: opacity 0.3s ease-in-out;">
+            {% endif %}
+        {% else %}
+            <!-- Video container -->
+            <div class="absolute inset-0 w-full h-full">
+                <div id="youtube-{{ item.id }}"
+                     class="youtube-player w-full h-full"
+                     data-video-id="{{ item.id }}">
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- Share icons -->
+        <div class="absolute top-4 right-4 flex flex-col gap-3 z-20 md:hidden">
+            <button onclick="shareContent('{% if item.type == 'image' %}{{ item.url }}{% else %}https://youtu.be/{{ item.id }}{% endif %}')"
+                    class="btn btn-circle btn-sm bg-white bg-opacity-90 hover:bg-opacity-100 border-none shadow-lg">
+                <i class="fas fa-share-alt text-base-content"></i>
+            </button>
+            
+            <a href="https://wa.me/2348139425458?text=Check%20out%20this:%20{% if item.type == 'image' %}{{ item.url }}{% else %}https://youtu.be/{{ item.id }}{% endif %}"
+               target="_blank"
+               class="btn btn-circle btn-sm bg-white bg-opacity-90 hover:bg-success hover:bg-opacity-100 border-none shadow-lg group">
+                <i class="fab fa-whatsapp text-success group-hover:text-white transition-colors duration-200"></i>
+            </a>
+        </div>
+    </figure>
+</div>
+{% endfor %}
+
+<script>
+function handleImageError(img) {
+    console.error('Failed to load image:', img.src);
+    
+    // If this was an optimized Cloudinary URL, try the original URL
+    if (img.src.includes('c_fill,f_auto,q_auto')) {
+        const originalUrl = img.src.replace('/upload/c_fill,f_auto,q_auto/', '/upload/');
+        console.log('Trying original URL:', originalUrl);
+        img.src = originalUrl;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all images with smooth loading
+    document.querySelectorAll('img').forEach(img => {
+        if (!img.complete) {
+            img.style.opacity = '0';
+        } else {
+            img.style.opacity = '1';
+        }
+    });
+});
+</script>

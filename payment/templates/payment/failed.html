@@ -1,0 +1,30 @@
+{% extends "_base.html" %}
+
+{% block title %}Payment Failed{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-base-100">
+    <div class="card w-96 bg-base-100 shadow-xl">
+        <div class="card-body items-center text-center">
+            <div class="text-error mb-4">
+                <svg class="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            
+            <h2 class="card-title text-2xl mb-2">Payment Failed</h2>
+            <p class="mb-6">Unfortunately, your payment could not be processed.</p>
+            
+            <div class="card-actions flex flex-col gap-2">
+                <button onclick="history.back()" class="btn btn-primary">
+                    Try Again
+                </button>
+                <a href="{% url 'pages:home' %}" class="btn btn-outline">
+                    Return to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
