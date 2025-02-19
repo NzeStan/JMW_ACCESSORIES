@@ -31,18 +31,21 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    "e49b-98-97-79-161.ngrok-free.app",
-    "192.168.68.63",
-]
+if not DEBUG:
+    ALLOWED_HOSTS = [
+        "jumemegawears.com",
+        "localhost",
+        "127.0.0.1",
+    ]  # always remove dev details
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost",
-    "http://127.0.0.1",
-    "https://e49b-98-97-79-161.ngrok-free.app",
-]
+    CSRF_TRUSTED_ORIGINS = [
+    ]
+else:
+    ALLOWED_HOSTS = [".ngrok-free.app", "localhost", "127.0.0.1"]
+
+    CSRF_TRUSTED_ORIGINS = [
+        "https://*.ngrok-free.app",
+    ]
 
 
 # Application definition
@@ -60,6 +63,7 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.github",
     "tailwind",
     "theme",
     "cloudinary_storage",
@@ -309,10 +313,12 @@ SOCIALACCOUNT_PROVIDERS = {
             "email",
         ],
     },
-    "facebook": {
-        "APP": {"client_id": "your-client-id", "secret": "your-secret-key", "key": ""},
-        "SCOPE": ["email", "public_profile"],
-        "FIELDS": ["email", "name"],
+    "github": {
+        "APP": {
+            "client_id": env("GITHUB_CLIENT_ID"),
+            "secret": env("GITHUB_SECRET"),
+        },
+        "SCOPE": ["read:user", "user:email"],
     },
 }
 
