@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: jmw-accessories
+    env: python
+    region: frankfurt
+    buildCommand: |
+      # Install python dependencies
+      pip install -r requirements.txt
+      # Install Node.js and npm
+      curl -fsSL https://deb.nodesource.com/setup_current.x | bash -
+      apt-get install -y nodejs
+      # Install npm dependencies and build Tailwind
+      cd theme/static_src && npm install && npm run build && cd ../..
+      # Create log directories
+      mkdir -p logs && chmod 755 logs
+      touch logs/debug.log logs/info.log logs/error.log logs/critical.log logs/daily.log
+      chmod 644 logs/debug.log logs/info.log logs/error.log logs/critical.log logs/daily.log
+      # Run Django commands
+      python manage.py makemigrations
+      python manage.py migrate
+      python manage.py createcachetable my_cache_table
+      python manage.py collectstatic --noinput
+    startCommand: gunicorn jmw.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --threads 4
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jmw-db
+          property: connectionString
+      - key: DJANGO_SETTINGS_MODULE
+        value: jmw.settings
+    domains:
+      - jumemegawears.com
+    autoDeploy: true
+
+databases:
+  - name: jmw-db
+    databaseName: jmw
+    user: jmw
+    plan: starter
