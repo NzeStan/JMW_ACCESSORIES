@@ -1,1 +1,0 @@
-WARNING 2025-02-07 16:52:21,585 connectionpool 138 133113873172224 Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'SSLEOFError(8, 'EOF occurred in violation of protocol (_ssl.c:2396)')': /v1_1/dhhaiy58r/image/upload
