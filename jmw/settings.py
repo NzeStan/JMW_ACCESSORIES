@@ -248,7 +248,7 @@ AWS_SNS_TOPICS = {
 }
 
 DEFAULT_FROM_EMAIL = "JMW <info@jumemegawears.com>"
-
+CONTACT_EMAIL = "contact@jumemegawears.com"
 
 # Cloudinary settings
 CLOUDINARY_STORAGE = {
