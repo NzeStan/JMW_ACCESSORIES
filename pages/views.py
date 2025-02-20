@@ -19,6 +19,12 @@ from order.models import BaseOrder
 from django.utils.decorators import method_decorator
 from cached.decorators import monitored_cache_page
 import logging
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.core.mail import EmailMultiAlternatives, get_connection
+from django.template.loader import render_to_string
+from django.conf import settings
+from smtplib import SMTPException
 
 
 logger = logging.getLogger(__name__)
@@ -143,45 +149,133 @@ class ContactPageView(TemplateView):
     template_name = "pages/contact.html"
 
     def post(self, request, *args, **kwargs):
+        """Handle contact form submission with comprehensive error handling and validation."""
+
         try:
-            # Get form data
-            name = request.POST.get("name")
-            email = request.POST.get("email")
-            subject = request.POST.get("subject")
-            message = request.POST.get("message")
+            # Get form data with basic cleaning
+            name = request.POST.get("name", "").strip()
+            email = request.POST.get("email", "").strip().lower()
+            subject = request.POST.get("subject", "").strip()
+            message = request.POST.get("message", "").strip()
 
             # Validate required fields
             if not all([name, email, subject, message]):
                 messages.error(request, "All fields are required.")
                 return HttpResponse(status=400)
 
-            # Compose email
-            email_message = f"""
-            New Contact Form Submission:
-            
+            # Validate name length
+            if len(name) < 2:
+                messages.error(request, "Please enter a valid name.")
+                return HttpResponse(status=400)
+
+            # Validate email format
+            try:
+                validate_email(email)
+            except ValidationError:
+                messages.error(request, "Please enter a valid email address.")
+                return HttpResponse(status=400)
+
+            # Validate message length
+            if len(message) < 10:
+                messages.error(request, "Message must be at least 10 characters long.")
+                return HttpResponse(status=400)
+
+            # Test email connection first
+            try:
+                connection = get_connection()
+                connection.open()
+                logger.info("Email connection test successful")
+                connection.close()
+            except Exception as conn_error:
+                logger.error(
+                    f"Email connection test failed: {str(conn_error)}", exc_info=True
+                )
+                messages.error(
+                    request,
+                    "Unable to connect to email server. Please try again later.",
+                )
+                return HttpResponse(status=503)
+
+            # Prepare email content
+            context = {
+                "name": name,
+                "email": email,
+                "subject": subject,
+                "message": message,
+            }
+
+            # Create text content
+            text_content = f"""
+            New Contact Form Submission
+
             Name: {name}
             Email: {email}
             Subject: {subject}
-            Message: {message}
+            Message:
+            {message}
             """
 
-            # Send email
-            send_mail(
-                subject=f"Contact Form: {subject}",
-                message=email_message,
-                from_email=email,
-                recipient_list=["contact@jumemegawears.com"],
-                fail_silently=False,
-            )
+            # Create HTML content using template
+            html_content = render_to_string("pages/contact_form.html", context)
 
-            messages.success(request, "Message sent successfully!")
-            return HttpResponse(status=204)
+            try:
+                # Create email message
+                email_message = EmailMultiAlternatives(
+                    subject=f"Contact Form: {subject}",
+                    body=text_content,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[settings.CONTACT_EMAIL],
+                    reply_to=[email],
+                    headers={"X-Contact-Form": "website"},
+                )
+                email_message.attach_alternative(html_content, "text/html")
+
+                # Send email
+                email_message.send(fail_silently=False)
+
+                logger.info(f"Contact form email sent successfully from {email}")
+                messages.success(
+                    request, "Message sent successfully! We'll get back to you soon."
+                )
+                return HttpResponse(status=204)
+
+            except SMTPException as smtp_error:
+                logger.error(
+                    f"SMTP error while sending contact form: {str(smtp_error)}",
+                    exc_info=True,
+                )
+                messages.error(request, "Failed to send email. Please try again later.")
+                return HttpResponse(status=503)
+
+            except ConnectionRefusedError:
+                logger.error("Email server connection refused", exc_info=True)
+                messages.error(
+                    request, "Email server connection failed. Please try again later."
+                )
+                return HttpResponse(status=503)
+
+            except Exception as email_error:
+                logger.error(
+                    f"Unexpected error sending contact form email: {str(email_error)}",
+                    exc_info=True,
+                )
+                messages.error(
+                    request, "An unexpected error occurred. Please try again later."
+                )
+                return HttpResponse(status=500)
 
         except Exception as e:
-            # Log the error for debugging
-            logger.error(f"Contact form error: {str(e)}")
-            messages.error(request, "Failed to send message. Please try again.")
-            return HttpResponse(status=400)
+            logger.error(f"Contact form processing error: {str(e)}", exc_info=True)
+            messages.error(request, "Failed to process your request. Please try again.")
+            return HttpResponse(status=500)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.user.is_authenticated:
+            context["prefilled_email"] = (
+                self.request.user.email
+            )  # Get logged-in user's email
+        return context
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):

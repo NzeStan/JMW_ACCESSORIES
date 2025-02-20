@@ -38,7 +38,7 @@
         {% endif %}
         {% if user.is_superuser %}
           <li><a href="{% url 'admin:index' %}" target="_blank">Admin</a></li>
-          <!--<li><a href="{% url 'email_dashboard' %}" target="_blank">Email Dashboard</a></li>-->
+          <a href="{% url 'email_dashboard' %}" target="_blank">Email Dashboard</a></li>
           <li><a href="{% url 'select_state_nysckit' %}" target="_blank">Kit</a></li>
           <li><a href="{% url 'select_state_nystour' %}" target="_blank">Tour</a></li>
           <li><a href="{% url 'select_state_church' %}" target="_blank">Church</a></li>
