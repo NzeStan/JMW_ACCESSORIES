@@ -33,10 +33,10 @@ DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 if not DEBUG:
     ALLOWED_HOSTS = [
+        "jmw-accessories.onrender.com",
+        "www.jumemegawears.com",
         "jumemegawears.com",
-        "localhost",
-        "127.0.0.1",
-    ]  # always remove dev details
+    ]
 
     CSRF_TRUSTED_ORIGINS = [
     ]
