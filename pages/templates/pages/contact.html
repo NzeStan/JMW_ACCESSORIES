@@ -53,7 +53,7 @@
                             <label class="label">
                                 <span class="label-text">Email</span>
                             </label>
-                            <input type="email" name="email" placeholder="Enter your email" class="input input-bordered w-full" required />
+                            <input type="email" name="email" value="{{ prefilled_email|default:'' }}" placeholder="Enter your email" class="input input-bordered w-full" required />
                         </div>
 
                         <div class="form-control w-full mt-4">
