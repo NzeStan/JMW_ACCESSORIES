@@ -43,6 +43,7 @@ def product_list(request, category_slug=None):
     return render(request, "products/list.html", context)
 
 
+@monitored_cache_page
 def load_more_products(request):
     try:
         product_type = request.GET.get("type")
