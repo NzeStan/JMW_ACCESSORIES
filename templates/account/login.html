@@ -1,5 +1,6 @@
 {% extends "_base.html" %}
 {% load socialaccount %}
+
 {% block title %}Log In - Jume Mega Wears & Accessories{% endblock title %}
 
 {% block header %}
@@ -19,32 +20,36 @@
             
             <h2 class="card-title text-2xl font-bold text-center mb-6">Welcome Back!</h2>
             
+            <!-- Debug form errors -->
+            {% if form.errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
             <!-- Enhanced login form -->
             <form method="post" class="space-y-4">
                 {% csrf_token %}
                 {% for field in form %}
-                <div class="form-control w-full">
-                    <label class="label">
-                        <span class="label-text">{{ field.label }}</span>
-                    </label>
-                    <input type="{{ field.field.widget.input_type }}" 
-                           name="{{ field.html_name }}"
-                           {% if field.field.required %}required{% endif %}
-                           placeholder="Enter your {{ field.label|lower }}"
-                           class="input input-bordered w-full {% if field.errors %}input-error{% endif %}"
-                    >
-                    {% if field.errors %}
-                    <label class="label">
-                        <span class="label-text-alt text-error">{{ field.errors|join:", " }}</span>
-                    </label>
-                    {% endif %}
-                    {% if field.help_text %}
-                    <label class="label">
-                        <span class="label-text-alt">{{ field.help_text }}</span>
-                    </label>
-                    {% endif %}
-                </div>
-                {% endfor %}
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text">{{ field.label }}</span>
+                        </label>
+                        <input type="{{ field.field.widget.input_type }}" 
+                            name="{{ field.html_name }}"
+                            {% if field.field.required %}required{% endif %}
+                            class="input input-bordered w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-base-100"
+                            placeholder="Enter your {{ field.label|lower }}"
+                        >
+                        {% if field.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ field.errors|join:", " }}</span>
+                        </label>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
                 
                 <button type="submit" class="btn btn-primary w-full">Login</button>
             </form>
