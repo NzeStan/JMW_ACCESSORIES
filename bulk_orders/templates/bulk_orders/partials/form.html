@@ -98,8 +98,12 @@
     </script>
 
     <div class="card-actions justify-end mt-6">
-        <button type="submit" class="btn btn-primary">
-            Generate Link
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+            <span id="btn-text">Generate Link</span>
+            <svg id="spinner" class="hidden ml-2 w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
         </button>
     </div>
 </form>
