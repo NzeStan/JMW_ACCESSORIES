@@ -16,7 +16,10 @@
             {% if redirect_field_value %}
             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
             {% endif %}
-            <button type="submit" class="btn btn-primary w-full">Sign Out</button>
+            <button type="submit" class="btn btn-primary w-full id="submit-btn""><span id="btn-text">Log Out</span><svg id="spinner" class="hidden ml-2 w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                </button>
             <a href="{% url 'pages:home' %}" 
                class="btn btn-ghost w-full mt-4">
                 Cancel

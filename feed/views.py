@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 class FeedView(TemplateView):
     template_name = "feed/feed.html"
-    items_per_page = 10
+    items_per_page = 30
 
-    def get_mixed_content(self, page_size=10, offset=0):
+    def get_mixed_content(self, page_size=30, offset=0):
         youtube_service = YouTubeService()
 
         try:
