@@ -23,7 +23,7 @@ urlpatterns = [
     # Django admin
     path("i_must_win/", admin.site.urls),
     # User management
-    path("account/", include("allauth.urls")),
+    path("accounts/", include("allauth.urls")),
     path("__reload__/", include("django_browser_reload.urls")),
     # Local apps
     path("", include("pages.urls", namespace="pages")),
