@@ -1,5 +1,9 @@
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from django.contrib.auth import get_user_model
+from django.utils.text import slugify
+
+User = get_user_model()
 
 
 class CustomAccountAdapter(DefaultAccountAdapter):
@@ -9,13 +13,28 @@ class CustomAccountAdapter(DefaultAccountAdapter):
 
 
 class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
-    def is_open_for_signup(self, request, sociallogin):
-        """Allow users to sign up via social authentication."""
-        return True
-
     def pre_social_login(self, request, sociallogin):
-        """Ensure social logins don't require email verification."""
+        """Link Google login to existing account instead of failing."""
         user = sociallogin.user
-        if user.email and not user.emailaddress_set.filter(email=user.email).exists():
-            # Auto-verify the email for social accounts
-            user.emailaddress_set.create(email=user.email, verified=True, primary=True)
+
+        if user.email:
+            existing_users = User.objects.filter(email=user.email)
+            if existing_users.exists():
+                existing_user = existing_users.first()  # Take the first user found
+                sociallogin.connect(request, existing_user)  # Link Google login
+                sociallogin.state["process"] = "connect"
+                return  # Stop further processing
+
+        # Ensure the username is set properly
+        if not user.pk:  # If the user is not yet saved
+            if not user.username:  # Generate a username if missing
+                base_username = slugify(user.email.split("@")[0])
+                new_username = base_username
+                count = 1
+
+                while User.objects.filter(username=new_username).exists():
+                    new_username = f"{base_username}-{count}"
+                    count += 1
+
+                user.username = new_username
+            user.save()
