@@ -8,3 +8,4 @@ video_cache
 run_ngrok.sh
 sent_emails
 logs
+.env
