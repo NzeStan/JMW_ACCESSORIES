@@ -22,21 +22,21 @@ from django.conf import settings
 urlpatterns = [
     # Django admin
     path("i_must_win/", admin.site.urls),
-    # User management
-    path("accounts/", include("allauth.urls")),
-    path("__reload__/", include("django_browser_reload.urls")),
-    # Local apps
-    path("", include("pages.urls", namespace="pages")),
-    path("products/", include("products.urls", namespace="products")),
-    path("cart/", include("cart.urls", namespace="cart")),
-    path("measurement/", include("measurement.urls", namespace="measurement")),
-    path("feed/", include("feed.urls", namespace="feed")),
-    path("order/", include("order.urls", namespace="order")),
-    path("payment/", include("payment.urls", namespace="payment")),
-    path("bulk_orders/", include("bulk_orders.urls", namespace="bulk_orders")),
-    path("webhook/", include("webhook_router.urls")),
-    path("email/", include("email_tracking.urls")),
-    path("generate/", include("orderitem_generation.urls")),
+    # API Auth
+    path("api/auth/", include("dj_rest_auth.urls")),
+    path("api/auth/registration/", include("dj_rest_auth.registration.urls")),
+    path("api/auth/social/", include("accounts.urls")),
+    
+    # Local apps (API)
+    path("api/products/", include("products.urls", namespace="products")),
+    path("api/cart/", include("cart.urls", namespace="cart")),
+    path("api/measurement/", include("measurement.urls", namespace="measurement")),
+    path("api/feed/", include("feed.urls", namespace="feed")),
+    path("api/order/", include("order.urls", namespace="order")),
+    path("api/payment/", include("payment.urls", namespace="payment")),
+    path("api/bulk_orders/", include("bulk_orders.urls", namespace="bulk_orders")),
+    path("api/webhook/", include("webhook_router.urls")),
+    path("api/generate/", include("orderitem_generation.urls")),
 ]
 if settings.DEBUG: # new
     import debug_toolbar

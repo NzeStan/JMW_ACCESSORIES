@@ -1,11 +1,14 @@
-from django.urls import path
-from . import views
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import InitializePaymentView, VerifyPaymentView, PaymentTransactionViewSet
 
 app_name = "payment"
 
+router = DefaultRouter()
+router.register(r'transactions', PaymentTransactionViewSet, basename='transaction')
+
 urlpatterns = [
-    path("initiate/", views.InitiatePaymentView.as_view(), name="initiate"),
-    path("verify/", views.verify_payment_view, name="verify_payment"),
-    path("success/", views.payment_success, name="success"),
-    path("failed/", views.payment_failed, name="failed"),
+    path('initialize/', InitializePaymentView.as_view(), name='initialize'),
+    path('verify/', VerifyPaymentView.as_view(), name='verify'),
+    path('', include(router.urls)),
 ]

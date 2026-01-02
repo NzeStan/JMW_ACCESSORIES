@@ -1,19 +1,15 @@
-from django.urls import path
-from . import views
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import CategoryViewSet, NyscKitViewSet, NyscTourViewSet, ChurchViewSet
 
 app_name = "products"
 
+router = DefaultRouter()
+router.register(r'categories', CategoryViewSet)
+router.register(r'nysc-kits', NyscKitViewSet)
+router.register(r'nysc-tours', NyscTourViewSet)
+router.register(r'church-items', ChurchViewSet)
+
 urlpatterns = [
-    path("", views.product_list, name="product_list"),
-    path(
-        "category/<slug:category_slug>/",
-        views.product_list,
-        name="product_list_by_category",
-    ),
-    path(
-        "<str:product_type>/<uuid:id>/<slug:slug>/",
-        views.product_detail,
-        name="product_detail",
-    ),
-    path("load-more/", views.load_more_products, name="load_more"),
+    path('', include(router.urls)),
 ]

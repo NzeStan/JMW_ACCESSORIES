@@ -159,16 +159,16 @@ class BaseProduct(models.Model):
         Category, related_name="%(class)ss", on_delete=models.SET_NULL, null=True
     )
     image = models.ImageField(
-        upload_to="product_images/", storage=MediaCloudinaryStorage(), blank=True
+        upload_to="product_images/", blank=True
     )
     image_1 = models.ImageField(
-        upload_to="product_images/", storage=MediaCloudinaryStorage(), blank=True
+        upload_to="product_images/", blank=True
     )
     image_2 = models.ImageField(
-        upload_to="product_images/", storage=MediaCloudinaryStorage(), blank=True
+        upload_to="product_images/", blank=True
     )
     image_3 = models.ImageField(
-        upload_to="product_images/", storage=MediaCloudinaryStorage(), blank=True
+        upload_to="product_images/", blank=True
     )
     description = models.TextField(blank=True)
     price = models.DecimalField(

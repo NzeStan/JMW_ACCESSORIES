@@ -59,20 +59,19 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "django.contrib.sites",
     # Third-party
+    "rest_framework",
+    "rest_framework.authtoken",
+    "dj_rest_auth",
+    "dj_rest_auth.registration",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.github",
-    "tailwind",
-    "theme",
-    "cloudinary_storage",
     "django.contrib.staticfiles",
-    "cloudinary",
     "debug_toolbar",
     # local
     "accounts.apps.AccountsConfig",
-    "pages.apps.PagesConfig",
     "products.apps.ProductsConfig",
     "cart.apps.CartConfig",
     "measurement.apps.MeasurementConfig",
@@ -81,12 +80,11 @@ INSTALLED_APPS = [
     "payment.apps.PaymentConfig",
     "bulk_orders.apps.BulkOrdersConfig",
     "webhook_router.apps.WebhookRouterConfig",
-    "email_tracking.apps.EmailTrackingConfig",
     "orderitem_generation.apps.OrderitemGenerationConfig",
     "cached.apps.CachedConfig",
 ]
 if DEBUG:
-    INSTALLED_APPS.append("django_browser_reload")
+    pass
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -98,12 +96,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    "cart.middleware.CartCleanupMiddleware",
-    "django_htmx.middleware.HtmxMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
-if DEBUG:
-    MIDDLEWARE.append("django_browser_reload.middleware.BrowserReloadMiddleware")
 
 ROOT_URLCONF = "jmw.urls"
 
@@ -118,7 +112,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "cart.context_processors.cart",
             ],
         },
     },
@@ -208,19 +201,29 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_USERNAME_REQUIRED = False
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_AVATAR_SUPPORT = False
-SOCIALACCOUNT_LOGIN_REDIRECT_URL = "pages:home"
-SOCIALACCOUNT_LOGOUT_REDIRECT_URL = "pages:home"
-#ACCOUNT_ADAPTER = "accounts.adapters.CustomAccountAdapter"
-#SOCIALACCOUNT_ADAPTER = "accounts.adapters.CustomSocialAccountAdapter"
+SOCIALACCOUNT_LOGIN_REDIRECT_URL = "/"
+SOCIALACCOUNT_LOGOUT_REDIRECT_URL = "/"
 ADMINS = [("Ifeanyi Nnamani", "ifeanyinnamani@jumemegawears.com")]
 SERVER_EMAIL = "server@jumemegawears.com"
 
+
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+# Celery Configuration
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "Africa/Lagos"
+
+# Custom Email Settings
+USE_CELERY_EMAIL = env.bool("USE_CELERY_EMAIL", default=False)
 
 if DEBUG:
     # Create a single email directory for file-based emails
     EMAIL_FILE_PATH = str(BASE_DIR / "sent_emails")
     EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
-    EMAIL_FILE_PATH = str(BASE_DIR / "sent_emails")
 else:
     # Email Configuration
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -230,83 +233,22 @@ else:
     EMAIL_HOST_USER = "ifeanyinnamani@jumemegawears.com"
     EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
-
-# EMAIL_BACKEND = "django_ses.SESBackend"
-
-# # AWS SES
-# AWS_SES_ACCESS_KEY_ID = env.str("AWS_SES_ACCESS_KEY_ID")
-# AWS_SES_SECRET_ACCESS_KEY = env.str("AWS_SES_SECRET_ACCESS_KEY")
-# AWS_SES_REGION_NAME = "eu-north-1"
-# AWS_SES_REGION_ENDPOINT = "email.eu-north-1.amazonaws.com"
-# AWS_SES_AUTO_THROTTLE = 0.5
-# AWS_SES_CONFIGURATION_SET = "Jmw_AccessoriesEmailTracking"
-
-# SNS Topics ARNs (replace with your actual ARNs from AWS Console)
-AWS_SNS_TOPICS = {
-    "bounces": "arn:aws:sns:eu-north-1:194722423613:jmw-ses-bounces",
-    "complaints": "arn:aws:sns:eu-north-1:194722423613:jmw-ses-complaints",
-    "delivery": "arn:aws:sns:eu-north-1:194722423613:jmw-ses-delivery",
-    "clicks": "arn:aws:sns:eu-north-1:194722423613:jmw-ses-clicks",
-    "opens": "arn:aws:sns:eu-north-1:194722423613:jmw-ses-opens",
-    "rejects": "arn:aws:sns:eu-north-1:194722423613:jmw-ses-rejects",
-    "rendering_failures": "arn:aws:sns:eu-north-1:194722423613:jmw-ses-rendering-failures",
-    "delivery_delays": "arn:aws:sns:eu-north-1:194722423613:jmw-ses-delivery-delays",
-    "sends": "arn:aws:sns:eu-north-1:194722423613:jmw-ses-sends",
-}
-
 DEFAULT_FROM_EMAIL = "JMW <info@jumemegawears.com>"
 CONTACT_EMAIL = "contact@jumemegawears.com"
 
-# Cloudinary settings
-CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": env("CLOUD_NAME"),
-    "API_KEY": env("CLOUD_API_KEY"),
-    "API_SECRET": env("CLOUD_API_SECRET"),
-    "STATICFILES_MANIFEST_ROOT": os.path.join(BASE_DIR, "manifest"),
-    "STATIC_IMAGES_EXTENSIONS": [
-        "jpg",
-        "jpe",
-        "jpeg",
-        "jpc",
-        "jp2",
-        "j2k",
-        "wdp",
-        "jxr",
-        "hdp",
-        "png",
-        "gif",
-        "webp",
-        "bmp",
-        "tif",
-        "tiff",
-        "ico",
-    ],
-    "MEDIA_EXTENSIONS": [
-        "jpg",
-        "jpe",
-        "jpeg",
-        "jpc",
-        "jp2",
-        "j2k",
-        "wdp",
-        "jxr",
-        "hdp",
-        "png",
-        "gif",
-        "webp",
-        "bmp",
-        "tif",
-        "tiff",
-        "ico",
-    ],
-}
 
 # Media files
 MEDIA_URL = "/media/" 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# This should come after CLOUDINARY_STORAGE settings
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+# Cloudinary
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': env('CLOUDINARY_API_KEY'),
+    'API_SECRET': env('CLOUDINARY_API_SECRET'),
+}
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 
 # Provider specific settings
 SOCIALACCOUNT_PROVIDERS = {
@@ -330,18 +272,21 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 
+REST_AUTH = {
+    "USE_JWT": True,
+    "JWT_AUTH_COOKIE": "jmw-auth",
+    "JWT_AUTH_REFRESH_COOKIE": "jmw-refresh-token",
+    "USER_DETAILS_SERIALIZER": "accounts.serializers.CustomUserSerializer",
+    "REGISTER_SERIALIZER": "accounts.serializers.CustomRegisterSerializer",
+}
+
+
 # whitenoise
 if DEBUG == False:
     WHITENOISE_AUTOREFRESH = False
     WHITENOISE_USE_FINDERS = True
     WHITENOISE_MANIFEST_STRICT = False
 
-
-TAILWIND_APP_NAME = "theme"
-# INTERNAL_IPS = ["127.0.0.1"]
-
-# Ensure npm can be found in the Docker container
-NPM_BIN_PATH = "npm"
 
 # cart
 CART_SESSION_ID = "cart"

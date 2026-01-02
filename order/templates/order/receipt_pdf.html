@@ -1,166 +1,140 @@
-{% load order_tags %}
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
+    <title>Receipt</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            line-height: 1.6;
+            font-size: 14px;
+            line-height: 1.5;
             color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
         }
         .header {
             text-align: center;
             margin-bottom: 30px;
         }
-        .logo {
-            max-width: 200px;
-            margin-bottom: 15px;
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #000;
         }
-        .company-info {
-            margin-bottom: 30px;
-            text-align: center;
+        .header p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #666;
         }
-        .receipt-details {
-            margin-bottom: 30px;
+        .info-section {
+            margin-bottom: 20px;
         }
-        .receipt-details table {
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            padding: 5px;
+            vertical-align: top;
+        }
+        .label {
+            font-weight: bold;
+            width: 150px;
+        }
+        .items-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-        .receipt-details th, .receipt-details td {
+        .items-table th, .items-table td {
+            border: 1px solid #ddd;
             padding: 10px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
         }
-        .order-items {
-            margin-bottom: 30px;
-        }
-        .order-items table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .order-items th, .order-items td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+        .items-table th {
+            background-color: #f9f9f9;
+            font-weight: bold;
         }
         .total-section {
             margin-top: 20px;
             text-align: right;
         }
+        .total-row {
+            font-weight: bold;
+            font-size: 16px;
+        }
         .footer {
             margin-top: 50px;
             text-align: center;
-            font-size: 0.9em;
-            color: #666;
-        }
-        .meta-info {
-            font-size: 0.8em;
-            color: #888;
-            margin-top: 20px;
-        }
-        .thank-you {
-            text-align: center;
-            margin: 40px 0;
-            font-size: 1.2em;
-            color: #444;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <img src="{{ company_logo }}" alt="Company Logo" class="logo">
         <h1>{{ company_name }}</h1>
-    </div>
-
-    <div class="company-info">
         <p>{{ company_address }}</p>
-        <p>Email: {{ company_email }}</p>
-        <p>Phone: {{ company_phone }}</p>
+        <p>Email: {{ company_email }} | Phone: {{ company_phone }}</p>
     </div>
 
-    <div class="receipt-details">
-        <h2>Receipt</h2>
-        <table>
+    <div class="info-section">
+        <h3>Order Receipt</h3>
+        <table class="info-table">
             <tr>
-                <th>Payment Reference:</th>
-                <td>{{ payment.reference }}</td>
+                <td class="label">Date:</td>
+                <td>{{ generated_date|date:"F j, Y" }}</td>
             </tr>
             <tr>
-                <th>Date:</th>
-                <td>{{ generated_date|date:"F j, Y H:i" }}</td>
+                <td class="label">Order Reference:</td>
+                <td>{{ payment.ref }}</td>
             </tr>
             <tr>
-                <th>Customer:</th>
+                <td class="label">Customer Name:</td>
                 <td>{{ orders.0.first_name }} {{ orders.0.last_name }}</td>
             </tr>
             <tr>
-                <th>Email:</th>
+                <td class="label">Email:</td>
                 <td>{{ orders.0.email }}</td>
             </tr>
         </table>
     </div>
-    {% for order in orders %}
-    <div class="order-items">
-        <h3>{{ order|get_order_type }} Items</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
                 {% for item in order.items.all %}
                 <tr>
                     <td>
                         {{ item.product.name }}
-                        {% if item.extra_fields %}
-                            <br>
-                            <small>
-                                {% for key, value in item.extra_fields.items %}
-                                    {{ key|title }}: {{ value }}{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
-                            </small>
+                        {% if item.extra_fields.size %}
+                            <br><small>Size: {{ item.extra_fields.size }}</small>
                         {% endif %}
                     </td>
                     <td>{{ item.quantity }}</td>
-                    <td>₦{{ item.price|floatformat:2 }}</td>
-                    <td>₦{{ item.get_cost|floatformat:2 }}</td>
+                    <td>&#8358;{{ item.price }}</td>
+                    <td>&#8358;{{ item.get_cost }}</td>
                 </tr>
                 {% endfor %}
-            </tbody>
-        </table>
-        <div class="total-section">
-            <p><strong>Order Total: ₦{{ order.total_cost|floatformat:2 }}</strong></p>
-        </div>
-    </div>
-    {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
 
     <div class="total-section">
-        <h3>Payment Summary</h3>
-        <p><strong>Total Amount Paid: ₦{{ payment.amount|floatformat:2 }}</strong></p>
-    </div>
-    
-
-    <div class="thank-you">
-        Thank you for shopping with us!
+        <p class="total-row">Grand Total: &#8358;{{ payment.amount }}</p>
     </div>
 
     <div class="footer">
-        <p>If you have any questions about this receipt, please contact us at {{ company_email }}</p>
-    </div>
-
-    <div class="meta-info">
-        <p>Receipt generated on {{ generated_date|date:"F j, Y H:i" }}</p>
-        <p>Reference: {{ payment.reference }}</p>
+        <p>Thank you for your patronage!</p>
+        <p>This receipt was automatically generated.</p>
     </div>
 </body>
 </html>

@@ -1,17 +1,12 @@
-from django.urls import path
-from .views import CreateMeasurementView, UpdateMeasurementView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import MeasurementViewSet
 
 app_name = "measurement"
 
+router = DefaultRouter()
+router.register(r'measurements', MeasurementViewSet, basename='measurement')
+
 urlpatterns = [
-    path(
-        "create/",
-        CreateMeasurementView.as_view(),
-        name="create_measurement",
-    ),
-    path(
-        "update/<uuid:pk>/", 
-        UpdateMeasurementView.as_view(),
-        name="update_measurement",
-    ),
+    path('', include(router.urls)),
 ]

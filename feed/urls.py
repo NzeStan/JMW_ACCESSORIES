@@ -1,9 +1,13 @@
-from django.urls import path
-from .views import FeedView, load_more_content
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import ImageViewSet, YouTubeVideoView
 
 app_name = "feed"
 
+router = DefaultRouter()
+router.register(r'images', ImageViewSet, basename='image')
+
 urlpatterns = [
-    path("", FeedView.as_view(), name="feed"),
-    path("load-more/", load_more_content, name="load_more"),
+    path('youtube/', YouTubeVideoView.as_view(), name='youtube-videos'),
+    path('', include(router.urls)),
 ]

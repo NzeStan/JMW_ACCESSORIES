@@ -13,7 +13,7 @@ class PaymentTransaction(models.Model):
     )
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
-    orders = models.ManyToManyField("order.BaseOrder", related_name="payments")
+    orders = models.ManyToManyField("order.Order", related_name="payments")
     metadata = models.JSONField(default=dict, blank=True)
 
     def get_formatted_metadata(self):

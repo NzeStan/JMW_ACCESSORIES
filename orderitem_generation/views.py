@@ -1,24 +1,23 @@
 from django.db import models
-from django.views import View
 from django.db.models import Count, Sum
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-import weasyprint
-from order.models import OrderItem, NyscKitOrder, BaseOrder
-from measurement.models import Measurement
-from django.views.generic import TemplateView
-from django.db.models.functions import Coalesce
-from products.constants import STATES, CHURCH_CHOICES
 from django.contrib.contenttypes.models import ContentType
-from products.models import NyscTour, Church
-from products.models import NyscKit
 from django.contrib.auth import get_user_model
-from operator import attrgetter
+from rest_framework import views, permissions, status
+from rest_framework.response import Response
+import weasyprint
+
+from order.models import OrderItem, NyscKitOrder
+from measurement.models import Measurement
+from products.models import NyscTour, Church, NyscKit
+from products.constants import STATES, CHURCH_CHOICES
 
 User = get_user_model()
 
 
-class NyscKitPDFView(View):
+class NyscKitPDFView(views.APIView):
+    permission_classes = [permissions.IsAdminUser]
     template_name = "orderitem_generation/nysckit_state_template.html"
 
     def get_context(self, request):
@@ -34,11 +33,10 @@ class NyscKitPDFView(View):
             OrderItem.objects.select_related(
                 "order",
                 "content_type",
-                "order__nysckitorder",
             )
-            .filter(order__paid=True, order__nysckitorder__state=state)
+            .filter(order__paid=True, order__delivery_details__state=state)
             .order_by(
-                "order__nysckitorder__local_government",
+                "order__delivery_details__local_government",
                 "content_type",
                 "object_id",
                 "extra_fields__size",
@@ -87,14 +85,14 @@ class NyscKitPDFView(View):
                 "content_type",
                 "object_id",
                 "extra_fields__size",
-                "order__nysckitorder__local_government",
+                "order__delivery_details__local_government",
             )
             .annotate(
                 total_count=Count("id"),
                 total_sum=Sum("quantity"),
             )
             .order_by(
-                "order__nysckitorder__local_government",
+                "order__delivery_details__local_government",
                 "content_type",
                 "object_id",
                 "extra_fields__size",
@@ -129,7 +127,7 @@ class NyscKitPDFView(View):
                     ),
                     "extra_fields__size": item["extra_fields__size"],
                     "order__local_government": item[
-                        "order__nysckitorder__local_government"
+                        "order__delivery_details__local_government"
                     ],
                     "total_count": item["total_count"],
                     "total_sum": item["total_sum"],
@@ -167,9 +165,9 @@ class NyscKitPDFView(View):
     def get(self, request, *args, **kwargs):
         context = self.get_context(request)
         if context is None:
-            return HttpResponse(
-                "Please select a state or no orders found for the selected state",
-                status=400,
+            return Response(
+                {"error": "Please select a state or no orders found for the selected state"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         html = render_to_string(self.template_name, context)
@@ -182,17 +180,8 @@ class NyscKitPDFView(View):
         return response
 
 
-class SelectNyscKitStateView(TemplateView):
-    template_name = "orderitem_generation/nysckit_select_template.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Just pass the STATES list directly
-        context["states"] = STATES
-        return context
-
-
-class NyscTourPDFView(View):
+class NyscTourPDFView(views.APIView):
+    permission_classes = [permissions.IsAdminUser]
     template_name = "orderitem_generation/nysctour_state_template.html"
 
     def get_context(self, request):
@@ -221,9 +210,9 @@ class NyscTourPDFView(View):
     def get(self, request, *args, **kwargs):
         context = self.get_context(request)
         if context is None:
-            return HttpResponse(
-                "Please select a state or no orders found for the selected state",
-                status=400,
+            return Response(
+                {"error": "Please select a state or no orders found for the selected state"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         html = render_to_string(self.template_name, context)
         response = HttpResponse(content_type="application/pdf")
@@ -235,17 +224,8 @@ class NyscTourPDFView(View):
         return response
 
 
-class SelectNyscTourStateView(TemplateView):
-    template_name = "orderitem_generation/tour_select_template.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Just pass the STATES list directly
-        context["states"] = STATES
-        return context
-
-
-class ChurchPDFView(View):
+class ChurchPDFView(views.APIView):
+    permission_classes = [permissions.IsAdminUser]
     template_name = "orderitem_generation/church_state_template.html"
 
     def get_context(self, request):
@@ -258,7 +238,7 @@ class ChurchPDFView(View):
 
         # Get the queryset without ordering
         order_items = OrderItem.objects.select_related(
-            "order", "content_type", "order__churchorder"
+            "order", "content_type"
         ).filter(order__paid=True, content_type=church_type, object_id__in=church_ids)
 
         if not order_items.exists():
@@ -270,7 +250,7 @@ class ChurchPDFView(View):
             key=lambda x: (
                 x.product.name,
                 x.extra_fields.get("size", ""),
-                x.order.churchorder.pickup_on_camp,
+                x.order.delivery_details.get("pickup_on_camp"),
             )
         )
 
@@ -291,7 +271,7 @@ class ChurchPDFView(View):
                 }
 
             summary_data[key]["total_quantity"] += item.quantity
-            if item.order.churchorder.pickup_on_camp:
+            if item.order.delivery_details.get("pickup_on_camp"):
                 summary_data[key]["pickup_count"] += item.quantity
             else:
                 summary_data[key]["delivery_count"] += item.quantity
@@ -319,9 +299,9 @@ class ChurchPDFView(View):
     def get(self, request, *args, **kwargs):
         context = self.get_context(request)
         if context is None:
-            return HttpResponse(
-                "Please select a church or no orders found for the selected church",
-                status=400,
+            return Response(
+                {"error": "Please select a church or no orders found for the selected church"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         html = render_to_string(self.template_name, context)
         response = HttpResponse(content_type="application/pdf")
@@ -331,13 +311,3 @@ class ChurchPDFView(View):
         weasyprint.HTML(string=html).write_pdf(response)
 
         return response
-
-
-class SelectChurchStateView(TemplateView):
-    template_name = "orderitem_generation/church_select_template.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Just pass the STATES list directly
-        context["church"] = CHURCH_CHOICES
-        return context
