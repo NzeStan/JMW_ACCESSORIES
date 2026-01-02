@@ -9,10 +9,13 @@
             font-size: 14px;
             line-height: 1.5;
             color: #333;
+            margin: 20px;
         }
         .header {
             text-align: center;
             margin-bottom: 30px;
+            border-bottom: 3px solid #333;
+            padding-bottom: 15px;
         }
         .header h1 {
             margin: 0;
@@ -26,18 +29,29 @@
         }
         .info-section {
             margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .info-section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 16px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
         }
         .info-table {
             width: 100%;
             border-collapse: collapse;
         }
         .info-table td {
-            padding: 5px;
+            padding: 8px 5px;
             vertical-align: top;
         }
         .label {
             font-weight: bold;
             width: 150px;
+            color: #555;
         }
         .items-table {
             width: 100%;
@@ -50,23 +64,30 @@
             text-align: left;
         }
         .items-table th {
-            background-color: #f9f9f9;
+            background-color: #f5f5f5;
             font-weight: bold;
+        }
+        .items-table tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
         .total-section {
             margin-top: 20px;
             text-align: right;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 5px;
         }
         .total-row {
             font-weight: bold;
-            font-size: 16px;
+            font-size: 18px;
+            color: #1976d2;
         }
         .footer {
             margin-top: 50px;
             text-align: center;
-            font-size: 12px;
+            font-size: 11px;
             color: #999;
-            border-top: 1px solid #eee;
+            border-top: 2px solid #eee;
             padding-top: 20px;
         }
     </style>
@@ -75,7 +96,7 @@
     <div class="header">
         <h1>{{ company_name }}</h1>
         <p>{{ company_address }}</p>
-        <p>Email: {{ company_email }} | Phone: {{ company_phone }}</p>
+        <p>📧 {{ company_email }} | 📞 {{ company_phone }}</p>
     </div>
 
     <div class="info-section">
@@ -83,11 +104,11 @@
         <table class="info-table">
             <tr>
                 <td class="label">Date:</td>
-                <td>{{ generated_date|date:"F j, Y" }}</td>
+                <td>{{ generated_date|date:"F j, Y - g:i A" }}</td>
             </tr>
             <tr>
                 <td class="label">Order Reference:</td>
-                <td>{{ payment.ref }}</td>
+                <td style="font-family: monospace; font-weight: bold;">{{ payment.reference }}</td>
             </tr>
             <tr>
                 <td class="label">Customer Name:</td>
@@ -97,16 +118,20 @@
                 <td class="label">Email:</td>
                 <td>{{ orders.0.email }}</td>
             </tr>
+            <tr>
+                <td class="label">Phone:</td>
+                <td>{{ orders.0.phone_number }}</td>
+            </tr>
         </table>
     </div>
 
     <table class="items-table">
         <thead>
             <tr>
-                <th>Item</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total</th>
+                <th style="width: 50%">Item</th>
+                <th style="width: 15%">Quantity</th>
+                <th style="width: 17.5%">Unit Price</th>
+                <th style="width: 17.5%">Total</th>
             </tr>
         </thead>
         <tbody>
@@ -116,12 +141,12 @@
                     <td>
                         {{ item.product.name }}
                         {% if item.extra_fields.size %}
-                            <br><small>Size: {{ item.extra_fields.size }}</small>
+                            <br><small style="color: #666;">Size: {{ item.extra_fields.size }}</small>
                         {% endif %}
                     </td>
-                    <td>{{ item.quantity }}</td>
-                    <td>&#8358;{{ item.price }}</td>
-                    <td>&#8358;{{ item.get_cost }}</td>
+                    <td style="text-align: center;">{{ item.quantity }}</td>
+                    <td style="text-align: right;">₦{{ item.price|floatformat:2 }}</td>
+                    <td style="text-align: right; font-weight: bold;">₦{{ item.get_cost|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
             {% endfor %}
@@ -129,12 +154,15 @@
     </table>
 
     <div class="total-section">
-        <p class="total-row">Grand Total: &#8358;{{ payment.amount }}</p>
+        <p class="total-row">Grand Total: ₦{{ payment.amount|floatformat:2 }}</p>
     </div>
 
     <div class="footer">
-        <p>Thank you for your patronage!</p>
-        <p>This receipt was automatically generated.</p>
+        <p><strong>Thank you for your patronage!</strong></p>
+        <p>This receipt was automatically generated by {{ company_name }}</p>
+        <p style="margin-top: 10px;">
+            For inquiries, contact us at {{ company_email }} or call {{ company_phone }}
+        </p>
     </div>
 </body>
 </html>
