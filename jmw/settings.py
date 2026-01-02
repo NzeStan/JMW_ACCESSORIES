@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",  # Keep for admin panel
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.sessions",  # ← ADDED: Required for admin login and allauth
     "django.contrib.messages",  # Needed for admin
     "django.contrib.staticfiles",  # Needed for admin static files
     "django.contrib.sites",  # Required by allauth
@@ -62,7 +63,8 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.github",
     
-    # Production utilities
+    # Third-party utilities
+    "django_filters",  # ← ADDED: For DRF filtering (DjangoFilterBackend)
     "whitenoise.runserver_nostatic",
     
     # Local apps
