@@ -104,8 +104,9 @@ ROOT_URLCONF = "jmw.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [],
         "APP_DIRS": True,
+        # Keep APP_DIRS=True for Django admin templates
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
@@ -163,7 +164,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 if DEBUG:
@@ -287,9 +287,6 @@ if DEBUG == False:
     WHITENOISE_USE_FINDERS = True
     WHITENOISE_MANIFEST_STRICT = False
 
-
-# cart
-CART_SESSION_ID = "cart"
 
 
 # log settings
