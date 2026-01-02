@@ -6,9 +6,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from rest_framework import views, permissions, status
 from rest_framework.response import Response
-import weasyprint
 
-from order.models import OrderItem, NyscKitOrder
+from order.models import OrderItem
 from measurement.models import Measurement
 from products.models import NyscTour, Church, NyscKit
 from products.constants import STATES, CHURCH_CHOICES
@@ -170,6 +169,15 @@ class NyscKitPDFView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Lazy import to avoid startup errors on Windows without Cairo
+        try:
+            import weasyprint
+        except ImportError:
+            return Response(
+                {"error": "PDF generation not available. WeasyPrint requires GTK+ libraries."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         html = render_to_string(self.template_name, context)
         response = HttpResponse(content_type="application/pdf")
         response["Content-Disposition"] = (
@@ -214,6 +222,16 @@ class NyscTourPDFView(views.APIView):
                 {"error": "Please select a state or no orders found for the selected state"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        
+        # Lazy import to avoid startup errors on Windows without Cairo
+        try:
+            import weasyprint
+        except ImportError:
+            return Response(
+                {"error": "PDF generation not available. WeasyPrint requires GTK+ libraries."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
         html = render_to_string(self.template_name, context)
         response = HttpResponse(content_type="application/pdf")
         response["Content-Disposition"] = (
@@ -303,6 +321,16 @@ class ChurchPDFView(views.APIView):
                 {"error": "Please select a church or no orders found for the selected church"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        
+        # Lazy import to avoid startup errors on Windows without Cairo
+        try:
+            import weasyprint
+        except ImportError:
+            return Response(
+                {"error": "PDF generation not available. WeasyPrint requires GTK+ libraries."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
         html = render_to_string(self.template_name, context)
         response = HttpResponse(content_type="application/pdf")
         response["Content-Disposition"] = (

@@ -1,5 +1,4 @@
 # order/utils.py
-from weasyprint import HTML, CSS
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -19,6 +18,9 @@ logger = logging.getLogger(__name__)
 def generate_receipt_pdf(orders, payment):
     """Generate PDF receipt for orders"""
     try:
+        # Lazy import to avoid startup errors on Windows without Cairo
+        from weasyprint import HTML
+        
         context = {
             "orders": orders,
             "payment": payment,
@@ -37,6 +39,9 @@ def generate_receipt_pdf(orders, payment):
         html = HTML(string=html_string)
         return html.write_pdf()
 
+    except ImportError as e:
+        logger.error(f"WeasyPrint not available: {str(e)}. Install GTK+ libraries for PDF generation.")
+        raise
     except Exception as e:
         logger.error(f"Error generating PDF: {str(e)}")
         raise
@@ -67,4 +72,3 @@ JUME MEGA WEARS & ACCESSORIES Team"""
     except Exception as e:
         logger.error(f"Error sending receipt email: {str(e)}")
         raise
-

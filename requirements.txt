@@ -28,3 +28,4 @@ google-auth-oauthlib==1.2.1
 google-auth-httplib2==0.2.0
 cloudinary==1.41.0
 django-cloudinary-storage==0.3.0 
+django-filter==24.3

@@ -5,7 +5,6 @@ import logging
 from django.utils import timezone
 from .models import CouponCode
 from django.template.loader import render_to_string
-from weasyprint import HTML
 from django.conf import settings
 from django.http import HttpResponse
 from django.core.mail import EmailMessage
@@ -35,6 +34,9 @@ def generate_coupon_codes(bulk_order, count=10):
 def generate_receipt(order):
     """Generate and send PDF receipt for an order."""
     try:
+        # Lazy import to avoid startup errors on Windows without Cairo
+        from weasyprint import HTML
+        
         # Prepare context for receipt template
         context = {
             "order": order,
@@ -75,6 +77,9 @@ def generate_receipt(order):
         logger.info(f"Receipt generated and sent for order {order.id}")
         return True
 
+    except ImportError as e:
+        logger.error(f"WeasyPrint not available: {str(e)}. Install GTK+ libraries for PDF generation.")
+        raise
     except Exception as e:
         logger.error(f"Error generating receipt for order {order.id}: {str(e)}")
         raise
