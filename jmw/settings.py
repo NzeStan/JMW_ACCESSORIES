@@ -324,7 +324,7 @@ else:
 # ==============================================================================
 # COMPANY DETAILS (For Receipts/PDFs)
 # ==============================================================================
-
+COMPANY_NAME = "JUME MEGA WEARS & ACCESSORIES"
 COMPANY_ADDRESS = "16 Emejiaka Street, Ngwa Rd, Aba Abia State"
 COMPANY_PHONE = "+2348139425458"
 COMPANY_EMAIL = "info@jumemegawears.com"

@@ -8,12 +8,16 @@ import logging
 from django.urls import reverse
 from django.utils import timezone
 from django.db import models, transaction
+from django.utils.text import slugify
+import random
+import string
 
 logger = logging.getLogger(__name__)
 
 
 class BulkOrderLink(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    slug = models.SlugField(max_length=300, unique=True, editable=False, help_text="Auto-generated from organization name")
     organization_name = models.CharField(max_length=255)
     price_per_item = models.DecimalField(max_digits=10, decimal_places=2)
     custom_branding_enabled = models.BooleanField(default=False)
@@ -22,20 +26,49 @@ class BulkOrderLink(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def _generate_unique_slug(self):
+        """Generate a unique slug from organization name with random suffix"""
+        base_slug = slugify(self.organization_name)
+        if len(base_slug) > 280:  # Leave room for suffix
+            base_slug = base_slug[:280]
+        
+        # Generate random 4-character suffix
+        suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+        slug = f"{base_slug}-{suffix}"
+        
+        # Ensure uniqueness
+        while BulkOrderLink.objects.filter(slug=slug).exists():
+            suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+            slug = f"{base_slug}-{suffix}"
+        
+        return slug
+
     def save(self, *args, **kwargs):
+        # Generate slug if not set
+        if not self.slug:
+            self.slug = self._generate_unique_slug()
+        
+        # Uppercase organization name
         self.organization_name = self.organization_name.upper()
+        
         try:
             super().save(*args, **kwargs)
-            logger.info(f"BulkOrderLink saved successfully: {self.id}")
+            logger.info(f"BulkOrderLink saved successfully: {self.slug}")
         except Exception as e:
             logger.error(f"Error saving BulkOrderLink: {str(e)}")
             raise
 
     def get_absolute_url(self):
-        return reverse("bulk_orders:order_landing", kwargs={"link_code": self.id})
+        # Now uses slug instead of UUID
+        return reverse("bulk_orders:order_landing", kwargs={"slug": self.slug})
 
     def is_expired(self):
         return timezone.now() > self.payment_deadline
+    
+    def get_shareable_url(self):
+        """Returns a clean, shareable URL using the slug"""
+        # This would be your frontend URL
+        return f"/bulk-order/{self.slug}/"
 
     class Meta:
         ordering = ["-created_at"]
@@ -48,6 +81,7 @@ class BulkOrderLink(models.Model):
             ),
             models.Index(fields=["organization_name"], name="bulk_order_org_name_idx"),
             models.Index(fields=["created_at"], name="bulk_order_created_idx"),
+            models.Index(fields=["slug"], name="bulk_order_slug_idx"),
         ]
 
 
@@ -67,6 +101,9 @@ class CouponCode(models.Model):
         except Exception as e:
             logger.error(f"Error saving CouponCode: {str(e)}")
             raise
+
+    def __str__(self):
+        return f"{self.code} ({'Used' if self.is_used else 'Available'})"
 
     class Meta:
         ordering = ["created_at"]
@@ -137,6 +174,9 @@ class OrderEntry(models.Model):
         except Exception as e:
             logger.error(f"Error saving OrderEntry: {str(e)}")
             raise
+
+    def __str__(self):
+        return f"#{self.serial_number} - {self.full_name} ({self.bulk_order.organization_name})"
 
     class Meta:
         ordering = ["bulk_order", "serial_number"]

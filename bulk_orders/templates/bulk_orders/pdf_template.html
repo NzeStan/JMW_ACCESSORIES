@@ -7,15 +7,69 @@
         body {
             font-family: Arial, sans-serif;
             font-size: 12px;
-            line-height: 1.5;
+            line-height: 1.6;
+            margin: 20px;
         }
         .header {
             text-align: center;
             margin-bottom: 30px;
+            border-bottom: 3px solid #333;
+            padding-bottom: 15px;
         }
         .header h1 {
-            margin: 0;
+            margin: 0 0 10px 0;
+            font-size: 26px;
+            color: #000;
+        }
+        .header .company {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .header .bulk-order-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            text-align: left;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .info-item {
+            padding: 5px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-value {
+            color: #000;
+        }
+        .summary-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 5px;
+        }
+        .stat-box {
+            text-align: center;
+        }
+        .stat-number {
             font-size: 24px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
         }
         table {
             width: 100%;
@@ -24,56 +78,137 @@
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 10px 8px;
             text-align: left;
         }
         th {
-            background-color: #f2f2f2;
+            background-color: #2c3e50;
+            color: white;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .paid-yes {
+            color: #27ae60;
             font-weight: bold;
         }
+        .paid-no {
+            color: #e74c3c;
+        }
         .footer {
-            margin-top: 50px;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
             text-align: center;
             font-size: 10px;
             color: #999;
+        }
+        .important-note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 20px 0;
+            font-size: 11px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Bulk Order Summary</h1>
-        <p><strong>Organization:</strong> {{ bulk_order.organization_name }}</p>
-        <p><strong>Price per Item:</strong> &#8358;{{ bulk_order.price_per_item }}</p>
-        <p><strong>Payment Deadline:</strong> {{ bulk_order.payment_deadline|date:"F j, Y" }}</p>
+        <h1>BULK ORDER SUMMARY</h1>
+        <div class="company">JUME MEGA WEARS & ACCESSORIES</div>
+        
+        <div class="bulk-order-info">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Organization:</div>
+                    <div class="info-value">{{ bulk_order.organization_name }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Order Link:</div>
+                    <div class="info-value" style="font-family: monospace; font-size: 10px;">{{ bulk_order.slug }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Price per Item:</div>
+                    <div class="info-value">₦{{ bulk_order.price_per_item|floatformat:2 }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Payment Deadline:</div>
+                    <div class="info-value">{{ bulk_order.payment_deadline|date:"F j, Y" }}</div>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <div class="important-note">
+        <strong>📋 Note:</strong> This report contains orders ONLY for <strong>{{ bulk_order.organization_name }}</strong>. 
+        Other bulk orders are not included in this document.
+    </div>
+
+    <div class="summary-stats">
+        <div class="stat-box">
+            <div class="stat-number">{{ orders.count }}</div>
+            <div class="stat-label">Total Orders</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number" style="color: #27ae60;">{{ orders|length|add:"0" }}{% for order in orders %}{% if order.paid %}{{ forloop.counter0|add:"1" }}{% endif %}{% endfor %}</div>
+            <div class="stat-label">Paid Orders</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number" style="color: #e74c3c;">{{ orders|length|add:"0" }}{% for order in orders %}{% if not order.paid %}{{ forloop.counter0|add:"1" }}{% endif %}{% endfor %}</div>
+            <div class="stat-label">Unpaid Orders</div>
+        </div>
+    </div>
+
+    <h2 style="margin-top: 30px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px;">Order Details</h2>
+    
     <table>
         <thead>
             <tr>
-                <th>Serial #</th>
-                <th>Full Name</th>
-                <th>Email</th>
-                <th>Size</th>
-                <th>Custom Name</th>
-                <th>Paid</th>
+                <th style="width: 8%;">Serial</th>
+                <th style="width: 22%;">Full Name</th>
+                <th style="width: 25%;">Email</th>
+                <th style="width: 10%;">Size</th>
+                <th style="width: 20%;">Custom Name</th>
+                <th style="width: 10%;">Coupon</th>
+                <th style="width: 8%;">Paid</th>
             </tr>
         </thead>
         <tbody>
             {% for order in orders %}
             <tr>
-                <td>{{ order.serial_number }}</td>
+                <td style="text-align: center; font-weight: bold;">#{{ order.serial_number }}</td>
                 <td>{{ order.full_name }}</td>
-                <td>{{ order.email }}</td>
-                <td>{{ order.size }}</td>
-                <td>{{ order.custom_name|default:"-" }}</td>
-                <td>{% if order.paid %}✓{% else %}✗{% endif %}</td>
+                <td style="font-size: 10px;">{{ order.email }}</td>
+                <td style="text-align: center; font-weight: bold;">{{ order.size }}</td>
+                <td {% if not order.custom_name %}style="font-style: italic;"{% endif %}>
+                    {{ order.custom_name|default:"—" }}
+                </td>
+                <td style="text-align: center; font-family: monospace; font-size: 9px;">
+                    {% if order.coupon_used %}{{ order.coupon_used.code }}{% else %}—{% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if order.paid %}
+                        <span class="paid-yes">✓</span>
+                    {% else %}
+                        <span class="paid-no">✗</span>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
     <div class="footer">
-        <p>Generated on {{ now|date:"F j, Y" }}</p>
+        <p><strong>Generated:</strong> {{ now|date:"F j, Y - g:i A" }}</p>
+        <p>This is a computer-generated document for {{ bulk_order.organization_name }}</p>
+        <p style="margin-top: 10px;">
+            JUME MEGA WEARS & ACCESSORIES<br>
+            16 Emejiaka Street, Ngwa Rd, Aba Abia State<br>
+            📞 +234 813 942 5458 | 📧 info@jumemegawears.com
+        </p>
     </div>
 </body>
 </html>
