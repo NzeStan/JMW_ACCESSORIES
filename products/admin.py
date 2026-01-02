@@ -18,7 +18,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 class BaseProductAdmin(admin.ModelAdmin):
-    list_display = ["name", "category", "price", "available", "out_of_stock", "created"]
+    list_display = ["id","name", "category", "price", "available", "out_of_stock", "created"]
     list_filter = ["available", "out_of_stock", "created", "updated"]
     list_editable = ["price", "available", "out_of_stock"]
     search_fields = ["name", "description"]

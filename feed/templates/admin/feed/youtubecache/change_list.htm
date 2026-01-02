@@ -1,0 +1,57 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <h2>YouTube Cache Management</h2>
+        
+        <div class="module" style="margin: 20px 0;">
+            <h3>Cache Information</h3>
+            <table>
+                <tr>
+                    <th style="width: 200px;">Last Cache Update:</th>
+                    <td>{% if last_cache_update %}{{ last_cache_update }}{% else %}Never cached{% endif %}</td>
+                </tr>
+                <tr>
+                    <th>Videos Count:</th>
+                    <td>{{ videos_count }}</td>
+                </tr>
+            </table>
+        </div>
+
+        {% if video_examples %}
+        <div class="module" style="margin: 20px 0;">
+            <h3>Sample Videos in Cache (First 5)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Video ID</th>
+                        <th>Title</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for video in video_examples %}
+                    <tr>
+                        <td>{{ video.id }}</td>
+                        <td>{{ video.title }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <div class="submit-row" style="margin: 20px 0;">
+            <form method="POST" action="{% url 'admin:refresh-youtube-cache' %}" style="display: inline;">
+                {% csrf_token %}
+                <input type="submit" value="Refresh Cache" class="default" />
+            </form>
+            <p class="help" style="margin-top: 10px;">
+                Clicking this button will fetch fresh videos from YouTube API and update the cache.
+                <strong>Note:</strong> This will consume YouTube API quota.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

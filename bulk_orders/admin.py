@@ -103,8 +103,6 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
     readonly_fields = ["created_at", "updated_at"]
     list_per_page = 20
 
-    actions = ["download_word_doc", "download_pdf", "generate_size_summary"]
-
     inlines = [CouponCodeInline]
 
     def total_orders(self, obj):
@@ -118,7 +116,7 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
     total_paid.short_description = "Paid Orders"
 
     def download_buttons(self, obj):
-        """Generate download buttons with consistent styling."""
+        """Generate download buttons using DRF ViewSet actions"""
         button_style = """
             display: inline-block;
             background-color: {color};
@@ -127,11 +125,13 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             text-decoration: none;
             border-radius: 3px;
             margin-right: 5px;
+            font-size: 12px;
         """
 
-        pdf_url = reverse("bulk_orders:download_pdf", args=[obj.id])
-        word_url = reverse("bulk_orders:download_word", args=[obj.id])
-        excel_url = reverse("bulk_orders:generate_size_summary", args=[obj.id])
+        # Use DRF ViewSet action URLs
+        pdf_url = reverse("bulk_orders:bulk-link-download-pdf", args=[obj.id])
+        word_url = reverse("bulk_orders:bulk-link-download-word", args=[obj.id])
+        excel_url = reverse("bulk_orders:bulk-link-generate-size-summary", args=[obj.id])
 
         buttons = f"""
             <a class="button" href="{pdf_url}" target="_blank" 
@@ -144,45 +144,3 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
         return format_html(buttons.strip())
 
     download_buttons.short_description = "Downloads"
-
-    def download_word_doc(self, request, queryset):
-        """Generate Word documents for selected bulk orders."""
-        try:
-            response = HttpResponse(content_type="application/msword")
-            response["Content-Disposition"] = 'attachment; filename="bulk_orders.doc"'
-            # Implement actual Word document generation here
-            return response
-        except Exception as e:
-            logger.error(f"Error generating Word documents: {str(e)}")
-            self.message_user(request, "Error generating Word documents", level="ERROR")
-
-    download_word_doc.short_description = "Download Word Documents"
-
-    def download_pdf(self, request, queryset):
-        """Generate PDFs for selected bulk orders."""
-        try:
-            response = HttpResponse(content_type="application/pdf")
-            response["Content-Disposition"] = 'attachment; filename="bulk_orders.pdf"'
-            # Implement actual PDF generation here
-            return response
-        except Exception as e:
-            logger.error(f"Error generating PDFs: {str(e)}")
-            self.message_user(request, "Error generating PDFs", level="ERROR")
-
-    download_pdf.short_description = "Download PDFs"
-
-    def generate_size_summary(self, request, queryset):
-        """Generate Excel summary for selected bulk orders."""
-        try:
-            response = HttpResponse(
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-            response["Content-Disposition"] = 'attachment; filename="size_summary.xlsx"'
-            # Implement actual Excel generation here
-            return response
-        except Exception as e:
-            logger.error(f"Error generating Excel summary: {str(e)}")
-            self.message_user(request, "Error generating Excel summary", level="ERROR")
-
-    generate_size_summary.short_description = "Generate Size Summary"
-

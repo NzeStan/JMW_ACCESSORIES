@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Bulk Order - {{ organization }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Bulk Order Summary</h1>
+        <p><strong>Organization:</strong> {{ bulk_order.organization_name }}</p>
+        <p><strong>Price per Item:</strong> &#8358;{{ bulk_order.price_per_item }}</p>
+        <p><strong>Payment Deadline:</strong> {{ bulk_order.payment_deadline|date:"F j, Y" }}</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Serial #</th>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Size</th>
+                <th>Custom Name</th>
+                <th>Paid</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.serial_number }}</td>
+                <td>{{ order.full_name }}</td>
+                <td>{{ order.email }}</td>
+                <td>{{ order.size }}</td>
+                <td>{{ order.custom_name|default:"-" }}</td>
+                <td>{% if order.paid %}✓{% else %}✗{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Generated on {{ now|date:"F j, Y" }}</p>
+    </div>
+</body>
+</html>

@@ -158,17 +158,26 @@ class BaseProduct(models.Model):
     category = models.ForeignKey(
         Category, related_name="%(class)ss", on_delete=models.SET_NULL, null=True
     )
+    # FIXED: Added Cloudinary storage to all image fields
     image = models.ImageField(
-        upload_to="product_images/", blank=True
+        upload_to="product_images/", 
+        storage=MediaCloudinaryStorage(),
+        blank=True
     )
     image_1 = models.ImageField(
-        upload_to="product_images/", blank=True
+        upload_to="product_images/", 
+        storage=MediaCloudinaryStorage(),
+        blank=True
     )
     image_2 = models.ImageField(
-        upload_to="product_images/", blank=True
+        upload_to="product_images/", 
+        storage=MediaCloudinaryStorage(),
+        blank=True
     )
     image_3 = models.ImageField(
-        upload_to="product_images/", blank=True
+        upload_to="product_images/", 
+        storage=MediaCloudinaryStorage(),
+        blank=True
     )
     description = models.TextField(blank=True)
     price = models.DecimalField(

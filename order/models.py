@@ -64,4 +64,7 @@ class OrderItem(models.Model):
     extra_fields = models.JSONField(default=dict, blank=True)
 
     def get_cost(self):
+        """Calculate cost, handling None price gracefully for admin add view"""
+        if self.price is None:
+            return 0
         return self.price * self.quantity
