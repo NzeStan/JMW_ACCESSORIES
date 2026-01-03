@@ -8,57 +8,72 @@ class CouponCodeSerializer(serializers.ModelSerializer):
         read_only_fields = ('is_used', 'created_at')
 
 class OrderEntrySerializer(serializers.ModelSerializer):
+    """
+    Serializer for OrderEntry with improved logic:
+    - Auto-sets paid=True when coupon is used
+    - Conditionally shows custom_name based on bulk_order.custom_branding_enabled
+    - Simplified API (bulk_order passed via context, not user input)
+    """
     coupon_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    bulk_order_slug = serializers.CharField(write_only=True, required=False)
+    custom_name = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = OrderEntry
         fields = [
-            'id', 'bulk_order', 'bulk_order_slug', 'serial_number', 'email', 'full_name', 'size',
+            'id', 'bulk_order', 'serial_number', 'email', 'full_name', 'size',
             'custom_name', 'coupon_used', 'paid', 'created_at', 'updated_at', 'coupon_code'
         ]
-        read_only_fields = ('serial_number', 'coupon_used', 'paid', 'created_at', 'updated_at', 'bulk_order')
+        read_only_fields = ('serial_number', 'coupon_used', 'paid', 'created_at', 'updated_at', 'bulk_order', 'id')
+
+    def to_representation(self, instance):
+        """Conditionally include custom_name based on bulk_order settings"""
+        representation = super().to_representation(instance)
+        
+        # ✅ FIX: Only include custom_name if custom branding is enabled
+        if not instance.bulk_order.custom_branding_enabled:
+            representation.pop('custom_name', None)
+        
+        return representation
 
     def validate(self, attrs):
-        # Handle bulk_order lookup by slug or ID
-        bulk_order_slug = attrs.pop('bulk_order_slug', None)
-        if bulk_order_slug:
-            try:
-                bulk_order = BulkOrderLink.objects.get(slug=bulk_order_slug)
-                attrs['bulk_order'] = bulk_order
-            except BulkOrderLink.DoesNotExist:
-                raise serializers.ValidationError({"bulk_order_slug": "Invalid bulk order link."})
+        # Get bulk_order from context (passed from ViewSet)
+        bulk_order = self.context.get('bulk_order')
         
-        # Validate bulk_order is set
-        if 'bulk_order' not in attrs:
-            raise serializers.ValidationError({"bulk_order": "Bulk order is required."})
+        if not bulk_order:
+            raise serializers.ValidationError({"bulk_order": "Bulk order context is required."})
+        
+        attrs['bulk_order'] = bulk_order
+        
+        # ✅ FIX: Validate custom_name only if branding is enabled
+        if not bulk_order.custom_branding_enabled:
+            attrs.pop('custom_name', None)  # Remove custom_name if not enabled
         
         # Validate coupon if provided
-        coupon_code_str = attrs.get('coupon_code')
+        coupon_code_str = attrs.pop('coupon_code', None)
         if coupon_code_str:
             try:
                 coupon = CouponCode.objects.get(
                     code=coupon_code_str, 
-                    bulk_order=attrs['bulk_order'], 
+                    bulk_order=bulk_order, 
                     is_used=False
                 )
                 attrs['coupon_used'] = coupon
+                # ✅ FIX: When coupon is used, automatically mark as paid
+                attrs['paid'] = True
             except CouponCode.DoesNotExist:
-                raise serializers.ValidationError({"coupon_code": "Invalid or used coupon code."})
+                raise serializers.ValidationError({"coupon_code": "Invalid or already used coupon code."})
         
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('coupon_code', None)
         coupon_used = validated_data.get('coupon_used')
         
         instance = super().create(validated_data)
         
+        # Mark coupon as used
         if coupon_used:
             coupon_used.is_used = True
             coupon_used.save()
-            # If coupon covers full payment (logic depends on requirements), mark paid?
-            # Assuming coupon logic handled elsewhere or manual verification for now.
             
         return instance
 
@@ -67,7 +82,7 @@ class BulkOrderLinkSerializer(serializers.ModelSerializer):
     order_count = serializers.IntegerField(source='orders.count', read_only=True)
     paid_count = serializers.SerializerMethodField()
     coupon_count = serializers.IntegerField(source='coupons.count', read_only=True)
-    shareable_url = serializers.SerializerMethodField()  # ✅ Changed to SerializerMethodField
+    shareable_url = serializers.SerializerMethodField()
     
     class Meta:
         model = BulkOrderLink

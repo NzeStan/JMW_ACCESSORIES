@@ -8,9 +8,14 @@ from django.core.paginator import Paginator
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+import uuid
 from .models import BulkOrderLink, OrderEntry, CouponCode
 from .serializers import BulkOrderLinkSerializer, OrderEntrySerializer, CouponCodeSerializer
 from .utils import generate_receipt, generate_coupon_codes
+from payment.utils import initialize_payment, verify_payment
 import logging
 
 logger = logging.getLogger(__name__)
@@ -188,20 +193,28 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
                 for size, size_orders in sorted(size_groups.items()):
                     doc.add_heading(f'Size: {size}', level=3)
                     
-                    table = doc.add_table(rows=1, cols=4)
+                    # ✅ FIX: Conditionally show Custom Name column
+                    col_count = 4 if bulk_order.custom_branding_enabled else 3
+                    table = doc.add_table(rows=1, cols=col_count)
                     table.style = 'Table Grid'
                     header_cells = table.rows[0].cells
                     header_cells[0].text = 'S/N'
                     header_cells[1].text = 'Name'
-                    header_cells[2].text = 'Custom Name' if bulk_order.custom_branding_enabled else ''
-                    header_cells[3].text = 'Status'
+                    if bulk_order.custom_branding_enabled:
+                        header_cells[2].text = 'Custom Name'
+                        header_cells[3].text = 'Status'
+                    else:
+                        header_cells[2].text = 'Status'
                     
                     for idx, order in enumerate(size_orders, 1):
                         row_cells = table.add_row().cells
                         row_cells[0].text = str(idx)
                         row_cells[1].text = order.full_name
-                        row_cells[2].text = order.custom_name or ''
-                        row_cells[3].text = 'Coupon' if order.coupon_used else 'Paid'
+                        if bulk_order.custom_branding_enabled:
+                            row_cells[2].text = order.custom_name or ''
+                            row_cells[3].text = 'Coupon' if order.coupon_used else 'Paid'
+                        else:
+                            row_cells[2].text = 'Coupon' if order.coupon_used else 'Paid'
                     
                     doc.add_paragraph()
             
@@ -267,8 +280,12 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
             worksheet.write(1, 0, f"Bulk Order: {bulk_order.organization_name}", title_format)
             worksheet.write(2, 0, f"Generated: {timezone.now().strftime('%B %d, %Y')}")
             
-            # Headers
-            headers = ['S/N', 'Size', 'Name', 'Custom Name', 'Status']
+            # ✅ FIX: Conditionally include Custom Name column
+            headers = ['S/N', 'Size', 'Name']
+            if bulk_order.custom_branding_enabled:
+                headers.append('Custom Name')
+            headers.append('Status')
+            
             for col, header in enumerate(headers):
                 worksheet.write(4, col, header, header_format)
             
@@ -281,19 +298,27 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
                 order_chunk = orders[i : i + chunk_size]
                 
                 for order in order_chunk:
-                    worksheet.write(row, 0, row - 4, cell_format)
-                    worksheet.write(row, 1, order.size, cell_format)
-                    worksheet.write(row, 2, order.full_name, cell_format)
-                    worksheet.write(row, 3, order.custom_name or '', cell_format)
+                    col = 0
+                    worksheet.write(row, col, row - 4, cell_format)
+                    col += 1
+                    worksheet.write(row, col, order.size, cell_format)
+                    col += 1
+                    worksheet.write(row, col, order.full_name, cell_format)
+                    col += 1
+                    
+                    if bulk_order.custom_branding_enabled:
+                        worksheet.write(row, col, order.custom_name or '', cell_format)
+                        col += 1
+                    
                     worksheet.write(
-                        row, 4, 'Coupon' if order.coupon_used else 'Paid', cell_format
+                        row, col, 'Coupon' if order.coupon_used else 'Paid', cell_format
                     )
                     row += 1
             
             # Size Summary
             summary_row = row + 2
             worksheet.merge_range(
-                summary_row, 0, summary_row, 4, 'Size Summary', header_format
+                summary_row, 0, summary_row, len(headers) - 1, 'Size Summary', header_format
             )
             
             summary_headers = ['Size', 'Total', 'Paid', 'Coupon']
@@ -322,8 +347,11 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
             worksheet.set_column(0, 0, 5)
             worksheet.set_column(1, 1, 10)
             worksheet.set_column(2, 2, 30)
-            worksheet.set_column(3, 3, 30)
-            worksheet.set_column(4, 4, 15)
+            if bulk_order.custom_branding_enabled:
+                worksheet.set_column(3, 3, 30)
+                worksheet.set_column(4, 4, 15)
+            else:
+                worksheet.set_column(3, 3, 15)
             
             workbook.close()
             output.seek(0)
@@ -367,6 +395,11 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
 
 
 class OrderEntryViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for OrderEntry with improved UX:
+    - No need to pass bulk_order_slug in request body
+    - Slug is extracted from URL path
+    """
     serializer_class = OrderEntrySerializer
     permission_classes = [permissions.AllowAny]
     
@@ -375,8 +408,87 @@ class OrderEntryViewSet(viewsets.ModelViewSet):
             return OrderEntry.objects.filter(email=self.request.user.email).select_related('bulk_order', 'coupon_used')
         return OrderEntry.objects.none()
 
-    def perform_create(self, serializer):
-        serializer.save()
+    def get_serializer_context(self):
+        """Pass bulk_order to serializer via context"""
+        context = super().get_serializer_context()
+        
+        # ✅ FIX: Extract slug from URL and pass bulk_order in context
+        slug = self.request.data.get('bulk_order_slug') or self.kwargs.get('bulk_order_slug')
+        
+        if slug:
+            try:
+                bulk_order = BulkOrderLink.objects.get(slug=slug)
+                context['bulk_order'] = bulk_order
+            except BulkOrderLink.DoesNotExist:
+                pass
+        
+        return context
+
+    def create(self, request, *args, **kwargs):
+        """Override create to handle bulk_order_slug from request body"""
+        # Extract slug from request data
+        slug = request.data.get('bulk_order_slug')
+        
+        if not slug:
+            return Response(
+                {"error": "bulk_order_slug is required in request body"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate bulk order exists
+        try:
+            bulk_order = BulkOrderLink.objects.get(slug=slug)
+        except BulkOrderLink.DoesNotExist:
+            return Response(
+                {"error": "Invalid bulk order link"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Pass bulk_order via context
+        serializer = self.get_serializer(data=request.data, context={'bulk_order': bulk_order, 'request': request})
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    # ✅ NEW: Payment initialization endpoint
+    @action(detail=True, methods=['post'])
+    def initialize_payment(self, request, pk=None):
+        """Initialize payment for an OrderEntry"""
+        order_entry = self.get_object()
+        
+        # Check if already paid
+        if order_entry.paid:
+            return Response(
+                {"error": "This order has already been paid"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate payment reference
+        reference = f"ORDER-{order_entry.bulk_order.id}-{order_entry.id}"
+        
+        # Calculate amount
+        amount = order_entry.bulk_order.price_per_item
+        email = order_entry.email
+        
+        # Build callback URL
+        callback_url = request.build_absolute_uri(f"/api/bulk_orders/payment/callback/")
+        
+        # Initialize payment
+        result = initialize_payment(amount, email, reference, callback_url)
+        
+        if result and result.get('status'):
+            return Response({
+                "authorization_url": result['data']['authorization_url'],
+                "access_code": result['data']['access_code'],
+                "reference": reference
+            })
+        
+        return Response(
+            {"error": "Payment initialization failed"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class CouponCodeViewSet(viewsets.ModelViewSet):
@@ -401,3 +513,72 @@ class CouponCodeViewSet(viewsets.ModelViewSet):
             "bulk_order": coupon.bulk_order.organization_name,
             "bulk_order_slug": coupon.bulk_order.slug,
         })
+
+
+# ✅ NEW: Payment webhook handler for bulk orders
+@csrf_exempt
+def bulk_order_payment_webhook(request):
+    """
+    Webhook handler for Paystack payment notifications for bulk orders
+    Reference format: ORDER-{bulk_order_id}-{order_entry_id}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
+    
+    try:
+        payload = json.loads(request.body)
+        logger.info(f"Bulk order payment webhook received: {payload}")
+        
+        # Verify webhook is from Paystack
+        event = payload.get('event')
+        if event != 'charge.success':
+            return JsonResponse({'status': 'ignored', 'message': 'Not a charge.success event'})
+        
+        data = payload.get('data', {})
+        reference = data.get('reference')
+        status_value = data.get('status')
+        
+        # Verify reference format: ORDER-{bulk_order_id}-{order_entry_id}
+        if not reference or not reference.startswith('ORDER-'):
+            return JsonResponse({'status': 'error', 'message': 'Invalid reference format'})
+        
+        # Extract IDs from reference
+        try:
+            parts = reference.split('-')
+            bulk_order_id = parts[1]
+            order_entry_id = parts[2]
+        except (IndexError, ValueError):
+            logger.error(f"Invalid reference format: {reference}")
+            return JsonResponse({'status': 'error', 'message': 'Invalid reference format'})
+        
+        # Verify payment with Paystack
+        verification_result = verify_payment(reference)
+        
+        if verification_result and verification_result.get('status') and verification_result['data']['status'] == 'success':
+            # Update OrderEntry
+            try:
+                order_entry = OrderEntry.objects.get(id=order_entry_id, bulk_order__id=bulk_order_id)
+                order_entry.paid = True
+                order_entry.save()
+                
+                logger.info(f"Bulk order payment successful: {reference} - OrderEntry {order_entry_id} marked as paid")
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Payment verified and order updated',
+                    'order_entry_id': str(order_entry_id)
+                })
+                
+            except OrderEntry.DoesNotExist:
+                logger.error(f"OrderEntry not found: {order_entry_id}")
+                return JsonResponse({'status': 'error', 'message': 'Order entry not found'}, status=404)
+        else:
+            logger.warning(f"Payment verification failed for reference: {reference}")
+            return JsonResponse({'status': 'error', 'message': 'Payment verification failed'}, status=400)
+            
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON in webhook payload")
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.error(f"Error processing bulk order payment webhook: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

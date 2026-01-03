@@ -99,6 +99,7 @@ class OrderEntryAdmin(admin.ModelAdmin):
 @admin.register(BulkOrderLink)
 class BulkOrderLinkAdmin(admin.ModelAdmin):
     list_display = [
+        "id",
         "organization_name",
         "slug_display",
         "price_per_item",

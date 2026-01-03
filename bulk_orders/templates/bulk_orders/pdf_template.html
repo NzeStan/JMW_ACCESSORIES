@@ -140,12 +140,17 @@
             <thead>
                 <tr>
                     <th style="width: 8%">S/N</th>
-                    <th style="width: 30%">Name</th>
+                    {% if bulk_order.custom_branding_enabled %}
+                        <th style="width: 25%">Name</th>
+                    {% else %}
+                        <th style="width: 35%">Name</th>
+                    {% endif %}
                     <th style="width: 12%">Size</th>
+                    {# ✅ FIX: Conditionally show Custom Name column #}
                     {% if bulk_order.custom_branding_enabled %}
                     <th style="width: 25%">Custom Name</th>
                     {% endif %}
-                    <th style="width: 25%">Status</th>
+                    <th style="width: 30%">Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -154,6 +159,7 @@
                     <td style="text-align: center;">{{ forloop.counter }}</td>
                     <td>{{ order.full_name }}</td>
                     <td style="text-align: center;">{{ order.size }}</td>
+                    {# ✅ FIX: Conditionally show custom_name data #}
                     {% if bulk_order.custom_branding_enabled %}
                     <td>{{ order.custom_name|default:'' }}</td>
                     {% endif %}
