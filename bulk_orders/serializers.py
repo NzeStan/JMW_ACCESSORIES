@@ -2,17 +2,20 @@ from rest_framework import serializers
 from .models import BulkOrderLink, CouponCode, OrderEntry
 
 class CouponCodeSerializer(serializers.ModelSerializer):
+    bulk_order_name = serializers.CharField(source='bulk_order.organization_name', read_only=True)
+    bulk_order_slug = serializers.CharField(source='bulk_order.slug', read_only=True)
+    
     class Meta:
         model = CouponCode
-        fields = '__all__'
-        read_only_fields = ('is_used', 'created_at')
+        fields = ['id', 'bulk_order', 'bulk_order_name', 'bulk_order_slug', 'code', 'is_used', 'created_at']
+        read_only_fields = ('id', 'is_used', 'created_at')
 
 class OrderEntrySerializer(serializers.ModelSerializer):
     """
     Serializer for OrderEntry with improved logic:
     - Auto-sets paid=True when coupon is used
+    - Validates coupon belongs to the specific bulk_order
     - Conditionally shows custom_name based on bulk_order.custom_branding_enabled
-    - Simplified API (bulk_order passed via context, not user input)
     """
     coupon_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
     custom_name = serializers.CharField(required=False, allow_blank=True)
@@ -48,20 +51,22 @@ class OrderEntrySerializer(serializers.ModelSerializer):
         if not bulk_order.custom_branding_enabled:
             attrs.pop('custom_name', None)  # Remove custom_name if not enabled
         
-        # Validate coupon if provided
+        # ✅ FIX: Validate coupon belongs to THIS specific bulk_order
         coupon_code_str = attrs.pop('coupon_code', None)
         if coupon_code_str:
             try:
                 coupon = CouponCode.objects.get(
                     code=coupon_code_str, 
-                    bulk_order=bulk_order, 
+                    bulk_order=bulk_order,  # ✅ Must match THIS bulk order
                     is_used=False
                 )
                 attrs['coupon_used'] = coupon
                 # ✅ FIX: When coupon is used, automatically mark as paid
                 attrs['paid'] = True
             except CouponCode.DoesNotExist:
-                raise serializers.ValidationError({"coupon_code": "Invalid or already used coupon code."})
+                raise serializers.ValidationError({
+                    "coupon_code": f"Invalid coupon code or coupon does not belong to {bulk_order.organization_name}. Please check your code."
+                })
         
         return attrs
 

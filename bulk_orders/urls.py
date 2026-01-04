@@ -17,7 +17,11 @@ urlpatterns = [
     path('', include(router.urls)),
 ]
 
-# Available endpoints:
+# ============================================================================
+# AVAILABLE ENDPOINTS - UPDATED!
+# ============================================================================
+
+# BULK ORDER LINKS:
 # GET    /api/bulk_orders/links/                                   # List all bulk orders
 # POST   /api/bulk_orders/links/                                   # Create new bulk order
 # GET    /api/bulk_orders/links/<slug>/                            # Get specific bulk order by slug
@@ -29,12 +33,40 @@ urlpatterns = [
 # GET    /api/bulk_orders/links/<slug>/download_word/              # Download Word (Admin)
 # GET    /api/bulk_orders/links/<slug>/generate_size_summary/      # Download Excel (Admin)
 #
+# ✅ NEW: ORDER SUBMISSION (NO bulk_order_slug NEEDED!)
+# POST   /api/bulk_orders/links/<slug>/submit_order/               # Submit order for this bulk order
+#        Request body: { "email": "...", "full_name": "...", "size": "...", "coupon_code": "..." }
+#        NO NEED for bulk_order_slug! It's in the URL!
+#
+# ORDER MANAGEMENT:
 # GET    /api/bulk_orders/orders/                                  # List user's orders
-# POST   /api/bulk_orders/orders/                                  # Submit new order (requires bulk_order_slug in body)
 # GET    /api/bulk_orders/orders/<id>/                             # Get specific order
 # POST   /api/bulk_orders/orders/<id>/initialize_payment/          # Initialize payment for order
 #
+# COUPON MANAGEMENT:
 # GET    /api/bulk_orders/coupons/                                 # List coupons (Admin)
+# GET    /api/bulk_orders/coupons/?bulk_order_slug=<slug>          # Filter by bulk order
 # POST   /api/bulk_orders/coupons/<id>/validate_coupon/            # Validate coupon
 #
+# PAYMENT:
 # POST   /api/bulk_orders/payment/callback/                        # Payment webhook (Paystack)
+
+# ============================================================================
+# USAGE EXAMPLES
+# ============================================================================
+
+# EXAMPLE 1: Submit order (user on page /bulk-order/church-2024-abc1/)
+# POST /api/bulk_orders/links/church-2024-abc1/submit_order/
+# {
+#   "email": "john@example.com",
+#   "full_name": "John Doe",
+#   "size": "L",
+#   "custom_name": "PASTOR JOHN",  // Only if custom_branding_enabled=True
+#   "coupon_code": "ABC12345"      // Optional
+# }
+
+# EXAMPLE 2: Get coupons for specific bulk order
+# GET /api/bulk_orders/coupons/?bulk_order_slug=church-2024-abc1
+
+# EXAMPLE 3: Initialize payment
+# POST /api/bulk_orders/orders/{order_id}/initialize_payment/

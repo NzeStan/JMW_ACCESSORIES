@@ -145,6 +145,7 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
             doc.add_paragraph(f"Generated: {timezone.now().strftime('%B %d, %Y - %I:%M %p')}")
             doc.add_paragraph(f'Price per Item: ₦{bulk_order.price_per_item:,.2f}')
             doc.add_paragraph(f'Payment Deadline: {bulk_order.payment_deadline.strftime("%B %d, %Y")}')
+            doc.add_paragraph(f'Custom Branding: {"Yes" if bulk_order.custom_branding_enabled else "No"}')
             doc.add_paragraph('')
             
             orders = bulk_order.orders.all()
@@ -193,27 +194,36 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
                 for size, size_orders in sorted(size_groups.items()):
                     doc.add_heading(f'Size: {size}', level=3)
                     
-                    # ✅ FIX: Conditionally show Custom Name column
-                    col_count = 4 if bulk_order.custom_branding_enabled else 3
-                    table = doc.add_table(rows=1, cols=col_count)
-                    table.style = 'Table Grid'
-                    header_cells = table.rows[0].cells
-                    header_cells[0].text = 'S/N'
-                    header_cells[1].text = 'Name'
+                    # ✅ FIX: Properly determine column count based on custom_branding_enabled
                     if bulk_order.custom_branding_enabled:
+                        # WITH custom branding: S/N, Name, Custom Name, Status
+                        table = doc.add_table(rows=1, cols=4)
+                        table.style = 'Table Grid'
+                        header_cells = table.rows[0].cells
+                        header_cells[0].text = 'S/N'
+                        header_cells[1].text = 'Name'
                         header_cells[2].text = 'Custom Name'
                         header_cells[3].text = 'Status'
-                    else:
-                        header_cells[2].text = 'Status'
-                    
-                    for idx, order in enumerate(size_orders, 1):
-                        row_cells = table.add_row().cells
-                        row_cells[0].text = str(idx)
-                        row_cells[1].text = order.full_name
-                        if bulk_order.custom_branding_enabled:
+                        
+                        for idx, order in enumerate(size_orders, 1):
+                            row_cells = table.add_row().cells
+                            row_cells[0].text = str(idx)
+                            row_cells[1].text = order.full_name
                             row_cells[2].text = order.custom_name or ''
                             row_cells[3].text = 'Coupon' if order.coupon_used else 'Paid'
-                        else:
+                    else:
+                        # WITHOUT custom branding: S/N, Name, Status
+                        table = doc.add_table(rows=1, cols=3)
+                        table.style = 'Table Grid'
+                        header_cells = table.rows[0].cells
+                        header_cells[0].text = 'S/N'
+                        header_cells[1].text = 'Name'
+                        header_cells[2].text = 'Status'
+                        
+                        for idx, order in enumerate(size_orders, 1):
+                            row_cells = table.add_row().cells
+                            row_cells[0].text = str(idx)
+                            row_cells[1].text = order.full_name
                             row_cells[2].text = 'Coupon' if order.coupon_used else 'Paid'
                     
                     doc.add_paragraph()
@@ -266,93 +276,207 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
             output = BytesIO()
             workbook = xlsxwriter.Workbook(output, {'constant_memory': True})
             
-            # Formats
-            header_format = workbook.add_format(
-                {'bold': True, 'bg_color': '#f0f0f0', 'border': 1, 'align': 'center'}
-            )
-            cell_format = workbook.add_format({'border': 1, 'align': 'center'})
-            title_format = workbook.add_format({'bold': True, 'font_size': 14})
+            # ============================================================================
+            # FORMATS
+            # ============================================================================
+            title_format = workbook.add_format({
+                'bold': True, 
+                'font_size': 16,
+                'align': 'left'
+            })
             
-            worksheet = workbook.add_worksheet(bulk_order.organization_name[:31])
+            subtitle_format = workbook.add_format({
+                'bold': True, 
+                'font_size': 12,
+                'align': 'left'
+            })
             
-            # Title
-            worksheet.write(0, 0, f"{settings.COMPANY_NAME}", title_format)
-            worksheet.write(1, 0, f"Bulk Order: {bulk_order.organization_name}", title_format)
-            worksheet.write(2, 0, f"Generated: {timezone.now().strftime('%B %d, %Y')}")
+            info_format = workbook.add_format({
+                'font_size': 10,
+                'align': 'left'
+            })
             
-            # ✅ FIX: Conditionally include Custom Name column
-            headers = ['S/N', 'Size', 'Name']
-            if bulk_order.custom_branding_enabled:
-                headers.append('Custom Name')
-            headers.append('Status')
+            section_header_format = workbook.add_format({
+                'bold': True,
+                'font_size': 12,
+                'bg_color': '#4472C4',
+                'font_color': 'white',
+                'align': 'center',
+                'valign': 'vcenter',
+                'border': 1
+            })
             
-            for col, header in enumerate(headers):
-                worksheet.write(4, col, header, header_format)
+            table_header_format = workbook.add_format({
+                'bold': True,
+                'bg_color': '#D9E1F2',
+                'border': 1,
+                'align': 'center',
+                'valign': 'vcenter'
+            })
             
-            # Orders
-            row = 5
-            chunk_size = 1000
+            cell_format = workbook.add_format({
+                'border': 1,
+                'align': 'center',
+                'valign': 'vcenter'
+            })
+            
+            cell_left_format = workbook.add_format({
+                'border': 1,
+                'align': 'left',
+                'valign': 'vcenter'
+            })
+            
+            total_format = workbook.add_format({
+                'bold': True,
+                'bg_color': '#FFF2CC',
+                'border': 1,
+                'align': 'center',
+                'valign': 'vcenter'
+            })
+            
+            # ============================================================================
+            # CREATE WORKSHEET
+            # ============================================================================
+            worksheet_name = bulk_order.organization_name[:31]  # Excel limit
+            worksheet = workbook.add_worksheet(worksheet_name)
+            
+            # ============================================================================
+            # TITLE SECTION
+            # ============================================================================
+            row = 0
+            worksheet.write(row, 0, settings.COMPANY_NAME, title_format)
+            row += 1
+            
+            worksheet.write(row, 0, f"Bulk Order: {bulk_order.organization_name}", subtitle_format)
+            row += 1
+            
+            worksheet.write(row, 0, f"Generated: {timezone.now().strftime('%B %d, %Y - %I:%M %p')}", info_format)
+            row += 1
+            
+            worksheet.write(row, 0, f"Price per Item: ₦{bulk_order.price_per_item:,.2f}", info_format)
+            row += 1
+            
+            worksheet.write(row, 0, f"Payment Deadline: {bulk_order.payment_deadline.strftime('%B %d, %Y')}", info_format)
+            row += 1
+            
+            worksheet.write(row, 0, f"Custom Branding: {'Yes' if bulk_order.custom_branding_enabled else 'No'}", info_format)
+            row += 2  # Extra spacing
+            
+            # ============================================================================
+            # SIZE SUMMARY SECTION (AT TOP, LIKE WORD DOC)
+            # ============================================================================
             orders = bulk_order.orders.all()
             
-            for i in range(0, orders.count(), chunk_size):
-                order_chunk = orders[i : i + chunk_size]
-                
-                for order in order_chunk:
-                    col = 0
-                    worksheet.write(row, col, row - 4, cell_format)
-                    col += 1
-                    worksheet.write(row, col, order.size, cell_format)
-                    col += 1
-                    worksheet.write(row, col, order.full_name, cell_format)
-                    col += 1
-                    
-                    if bulk_order.custom_branding_enabled:
-                        worksheet.write(row, col, order.custom_name or '', cell_format)
-                        col += 1
-                    
-                    worksheet.write(
-                        row, col, 'Coupon' if order.coupon_used else 'Paid', cell_format
-                    )
-                    row += 1
+            # Calculate size summary
+            size_summary = orders.values("size").annotate(
+                total=Count("id"),
+                paid=Count("id", filter=Q(paid=True)),
+                coupon=Count("id", filter=Q(coupon_used__isnull=False)),
+            ).order_by("size")
             
-            # Size Summary
-            summary_row = row + 2
-            worksheet.merge_range(
-                summary_row, 0, summary_row, len(headers) - 1, 'Size Summary', header_format
-            )
+            # Section header
+            worksheet.merge_range(row, 0, row, 3, 'SUMMARY BY SIZE', section_header_format)
+            row += 1
             
+            # Summary table headers
             summary_headers = ['Size', 'Total', 'Paid', 'Coupon']
-            summary_row += 1
             for col, header in enumerate(summary_headers):
-                worksheet.write(summary_row, col, header, header_format)
+                worksheet.write(row, col, header, table_header_format)
+            row += 1
             
-            size_summary = (
-                orders.values("size")
-                .annotate(
-                    total=Count("id"),
-                    paid=Count("id", filter=Q(paid=True)),
-                    coupon=Count("id", filter=Q(coupon_used__isnull=False)),
-                )
-                .order_by("size")
-            )
+            # Summary data
+            grand_total = 0
+            grand_paid = 0
+            grand_coupon = 0
             
             for size_data in size_summary:
-                summary_row += 1
-                worksheet.write(summary_row, 0, size_data['size'], cell_format)
-                worksheet.write(summary_row, 1, size_data['total'], cell_format)
-                worksheet.write(summary_row, 2, size_data['paid'], cell_format)
-                worksheet.write(summary_row, 3, size_data['coupon'], cell_format)
+                worksheet.write(row, 0, size_data['size'], cell_format)
+                worksheet.write(row, 1, size_data['total'], cell_format)
+                worksheet.write(row, 2, size_data['paid'], cell_format)
+                worksheet.write(row, 3, size_data['coupon'], cell_format)
+                
+                grand_total += size_data['total']
+                grand_paid += size_data['paid']
+                grand_coupon += size_data['coupon']
+                
+                row += 1
             
-            # Column widths
-            worksheet.set_column(0, 0, 5)
-            worksheet.set_column(1, 1, 10)
-            worksheet.set_column(2, 2, 30)
+            # Grand total row
+            worksheet.write(row, 0, 'TOTAL', total_format)
+            worksheet.write(row, 1, grand_total, total_format)
+            worksheet.write(row, 2, grand_paid, total_format)
+            worksheet.write(row, 3, grand_coupon, total_format)
+            row += 2  # Extra spacing
+            
+            # ============================================================================
+            # ORDERS SECTION (WITH CONDITIONAL CUSTOM_NAME COLUMN)
+            # ============================================================================
+            
+            # Section header
             if bulk_order.custom_branding_enabled:
-                worksheet.set_column(3, 3, 30)
-                worksheet.set_column(4, 4, 15)
+                worksheet.merge_range(row, 0, row, 4, 'ORDER DETAILS', section_header_format)
             else:
-                worksheet.set_column(3, 3, 15)
+                worksheet.merge_range(row, 0, row, 3, 'ORDER DETAILS', section_header_format)
+            row += 1
             
+            # Determine headers based on custom_branding_enabled
+            if bulk_order.custom_branding_enabled:
+                headers = ['S/N', 'Size', 'Name', 'Custom Name', 'Status']
+            else:
+                headers = ['S/N', 'Size', 'Name', 'Status']
+            
+            # Write headers
+            for col, header in enumerate(headers):
+                worksheet.write(row, col, header, table_header_format)
+            row += 1
+            
+            # Write orders
+            start_row = row
+            serial_number = 1
+            
+            for order in orders:
+                col = 0
+                
+                # S/N
+                worksheet.write(row, col, serial_number, cell_format)
+                col += 1
+                
+                # Size
+                worksheet.write(row, col, order.size, cell_format)
+                col += 1
+                
+                # Name
+                worksheet.write(row, col, order.full_name, cell_left_format)
+                col += 1
+                
+                # Custom Name (only if enabled)
+                if bulk_order.custom_branding_enabled:
+                    worksheet.write(row, col, order.custom_name or '', cell_left_format)
+                    col += 1
+                
+                # Status
+                status_text = 'Coupon' if order.coupon_used else 'Paid'
+                worksheet.write(row, col, status_text, cell_format)
+                
+                row += 1
+                serial_number += 1
+            
+            # ============================================================================
+            # COLUMN WIDTHS
+            # ============================================================================
+            worksheet.set_column(0, 0, 6)   # S/N
+            worksheet.set_column(1, 1, 8)   # Size
+            worksheet.set_column(2, 2, 30)  # Name
+            
+            if bulk_order.custom_branding_enabled:
+                worksheet.set_column(3, 3, 30)  # Custom Name
+                worksheet.set_column(4, 4, 12)  # Status
+            else:
+                worksheet.set_column(3, 3, 12)  # Status
+            
+            # ============================================================================
+            # FINALIZE
+            # ============================================================================
             workbook.close()
             output.seek(0)
             
@@ -391,15 +515,28 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
             'used_coupons': bulk_order.coupons.filter(is_used=True).count(),
             'is_expired': bulk_order.is_expired(),
             'payment_deadline': bulk_order.payment_deadline,
+            'custom_branding_enabled': bulk_order.custom_branding_enabled,
         })
+
+    # ✅ NEW: Add orders directly to bulk order (nested route)
+    @action(detail=True, methods=['post'], permission_classes=[permissions.AllowAny])
+    def submit_order(self, request, slug=None):
+        """Submit order for this bulk order (no need for bulk_order_slug in body!)"""
+        bulk_order = self.get_object()
+        
+        # Pass bulk_order via context
+        serializer = OrderEntrySerializer(
+            data=request.data, 
+            context={'bulk_order': bulk_order, 'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        order_entry = serializer.save()
+        
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class OrderEntryViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for OrderEntry with improved UX:
-    - No need to pass bulk_order_slug in request body
-    - Slug is extracted from URL path
-    """
+    """ViewSet for OrderEntry - user's own orders"""
     serializer_class = OrderEntrySerializer
     permission_classes = [permissions.AllowAny]
     
@@ -408,51 +545,7 @@ class OrderEntryViewSet(viewsets.ModelViewSet):
             return OrderEntry.objects.filter(email=self.request.user.email).select_related('bulk_order', 'coupon_used')
         return OrderEntry.objects.none()
 
-    def get_serializer_context(self):
-        """Pass bulk_order to serializer via context"""
-        context = super().get_serializer_context()
-        
-        # ✅ FIX: Extract slug from URL and pass bulk_order in context
-        slug = self.request.data.get('bulk_order_slug') or self.kwargs.get('bulk_order_slug')
-        
-        if slug:
-            try:
-                bulk_order = BulkOrderLink.objects.get(slug=slug)
-                context['bulk_order'] = bulk_order
-            except BulkOrderLink.DoesNotExist:
-                pass
-        
-        return context
-
-    def create(self, request, *args, **kwargs):
-        """Override create to handle bulk_order_slug from request body"""
-        # Extract slug from request data
-        slug = request.data.get('bulk_order_slug')
-        
-        if not slug:
-            return Response(
-                {"error": "bulk_order_slug is required in request body"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Validate bulk order exists
-        try:
-            bulk_order = BulkOrderLink.objects.get(slug=slug)
-        except BulkOrderLink.DoesNotExist:
-            return Response(
-                {"error": "Invalid bulk order link"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        # Pass bulk_order via context
-        serializer = self.get_serializer(data=request.data, context={'bulk_order': bulk_order, 'request': request})
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-    # ✅ NEW: Payment initialization endpoint
+    # ✅ Payment initialization endpoint
     @action(detail=True, methods=['post'])
     def initialize_payment(self, request, pk=None):
         """Initialize payment for an OrderEntry"""
@@ -496,6 +589,16 @@ class CouponCodeViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAdminUser]
     queryset = CouponCode.objects.all().select_related('bulk_order')
     
+    def get_queryset(self):
+        """✅ FIX: Filter coupons by bulk_order if provided"""
+        queryset = super().get_queryset()
+        bulk_order_slug = self.request.query_params.get('bulk_order_slug')
+        
+        if bulk_order_slug:
+            queryset = queryset.filter(bulk_order__slug=bulk_order_slug)
+        
+        return queryset
+    
     @action(detail=True, methods=['post'])
     def validate_coupon(self, request, pk=None):
         """Validate if a coupon is valid and unused"""
@@ -515,7 +618,7 @@ class CouponCodeViewSet(viewsets.ModelViewSet):
         })
 
 
-# ✅ NEW: Payment webhook handler for bulk orders
+# ✅ Payment webhook handler for bulk orders
 @csrf_exempt
 def bulk_order_payment_webhook(request):
     """
