@@ -48,7 +48,7 @@ def generate_receipt(order):
         }
 
         # Render receipt HTML
-        html_string = render_to_string("bulk_orders/receipt.html", context)
+        html_string = render_to_string("bulk_orders/bulk_order_receipt.html", context)
 
         # Create PDF using WeasyPrint
         html = HTML(string=html_string)

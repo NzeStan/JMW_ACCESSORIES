@@ -10,23 +10,48 @@ class CouponCodeSerializer(serializers.ModelSerializer):
         fields = ['id', 'bulk_order', 'bulk_order_name', 'bulk_order_slug', 'code', 'is_used', 'created_at']
         read_only_fields = ('id', 'is_used', 'created_at')
 
+class BulkOrderLinkSummarySerializer(serializers.ModelSerializer):
+    is_expired = serializers.SerializerMethodField()
+    shareable_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BulkOrderLink
+        fields = [
+            'id',
+            'slug',
+            'organization_name',
+            'price_per_item',
+            'custom_branding_enabled',
+            'payment_deadline',
+            'is_expired',
+            'shareable_url',
+        ]
+
+    def get_is_expired(self, obj):
+        return obj.is_expired()
+
+    def get_shareable_url(self, obj):
+        request = self.context.get('request')
+        path = obj.get_shareable_url()
+        return request.build_absolute_uri(path) if request else path
+
+
 class OrderEntrySerializer(serializers.ModelSerializer):
-    """
-    Serializer for OrderEntry with improved logic:
-    - Auto-sets paid=True when coupon is used
-    - Validates coupon belongs to the specific bulk_order
-    - Conditionally shows custom_name based on bulk_order.custom_branding_enabled
-    """
+    bulk_order = BulkOrderLinkSummarySerializer(read_only=True)
     coupon_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
     custom_name = serializers.CharField(required=False, allow_blank=True)
-    
+
     class Meta:
         model = OrderEntry
         fields = [
             'id', 'bulk_order', 'serial_number', 'email', 'full_name', 'size',
             'custom_name', 'coupon_used', 'paid', 'created_at', 'updated_at', 'coupon_code'
         ]
-        read_only_fields = ('serial_number', 'coupon_used', 'paid', 'created_at', 'updated_at', 'bulk_order', 'id')
+        read_only_fields = (
+            'id', 'bulk_order', 'serial_number',
+            'coupon_used', 'paid', 'created_at', 'updated_at'
+        )
+
 
     def to_representation(self, instance):
         """Conditionally include custom_name based on bulk_order settings"""
