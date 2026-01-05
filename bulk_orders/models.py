@@ -59,8 +59,18 @@ class BulkOrderLink(models.Model):
             raise
 
     def get_absolute_url(self):
-        # Now uses slug instead of UUID
-        return reverse("bulk_orders:order_landing", kwargs={"slug": self.slug})
+        """
+        ✅ FIXED: Return the shareable URL path instead of trying to reverse a non-existent URL pattern.
+        If you have a specific URL pattern, update this method accordingly.
+        """
+        # Option 1: Return the shareable URL path (recommended)
+        return self.get_shareable_url()
+        
+        # Option 2: If you have a URL pattern, uncomment and use:
+        # try:
+        #     return reverse("bulk_orders:bulk-link-detail", kwargs={"slug": self.slug})
+        # except:
+        #     return self.get_shareable_url()
 
     def is_expired(self):
         return timezone.now() > self.payment_deadline
