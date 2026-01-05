@@ -23,6 +23,7 @@ from .utils import (
     generate_bulk_order_word,
     generate_bulk_order_excel,
 )
+from jmw.background_utils import send_payment_receipt_email, generate_payment_receipt_pdf_task
 import logging
 
 logger = logging.getLogger(__name__)
@@ -74,68 +75,93 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
         Public page showing all paid orders for social proof.
         Supports HTML view and PDF download.
         """
-        bulk_order = self.get_object()
-        
-        # Get only PAID orders
-        paid_orders = bulk_order.orders.filter(paid=True).order_by('-created_at')
-        
-        # Size summary
-        size_summary = (
-            paid_orders.values("size")
-            .annotate(count=Count("size"))
-            .order_by("size")
-        )
-        
-        # Check if download=pdf parameter
-        if request.GET.get('download') == 'pdf':
+        try:
+            bulk_order = self.get_object()
+            
+            # Get only PAID orders
+            paid_orders = bulk_order.orders.filter(paid=True).order_by('-created_at')
+            
+            # Size summary
+            size_summary = list(
+                paid_orders.values("size")
+                .annotate(count=Count("size"))
+                .order_by("size")
+            )
+            
+            # Check if download=pdf parameter
+            if request.GET.get('download') == 'pdf':
+                try:
+                    from weasyprint import HTML
+                    
+                    context = {
+                        'bulk_order': bulk_order,
+                        'size_summary': size_summary,
+                        'paid_orders': paid_orders,
+                        'total_paid': paid_orders.count(),
+                        'company_name': settings.COMPANY_NAME,
+                        'company_address': settings.COMPANY_ADDRESS,
+                        'company_phone': settings.COMPANY_PHONE,
+                        'company_email': settings.COMPANY_EMAIL,
+                        'now': timezone.now(),
+                    }
+                    
+                    html_string = render_to_string('bulk_orders/pdf_template.html', context)
+                    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+                    pdf = html.write_pdf()
+                    
+                    response = HttpResponse(pdf, content_type='application/pdf')
+                    filename = f'completed_orders_{bulk_order.slug}.pdf'
+                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    
+                    logger.info(f"Generated public paid orders PDF for: {bulk_order.slug}")
+                    return response
+                    
+                except ImportError:
+                    return Response(
+                        {"error": "PDF generation not available"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                except Exception as e:
+                    logger.error(f"Error generating PDF: {str(e)}", exc_info=True)
+                    return Response(
+                        {"error": f"PDF generation failed: {str(e)}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            
+            # HTML view
+            now = timezone.now()
+            
+            # Calculate days remaining safely
             try:
-                from weasyprint import HTML
-                
-                context = {
-                    'bulk_order': bulk_order,
-                    'size_summary': size_summary,
-                    'paid_orders': paid_orders,
-                    'total_paid': paid_orders.count(),
-                    'company_name': settings.COMPANY_NAME,
-                    'company_address': settings.COMPANY_ADDRESS,
-                    'company_phone': settings.COMPANY_PHONE,
-                    'company_email': settings.COMPANY_EMAIL,
-                    'now': timezone.now(),
-                }
-                
-                html_string = render_to_string('bulk_orders/pdf_template.html', context)
-                html = HTML(string=html_string, base_url=request.build_absolute_uri())
-                pdf = html.write_pdf()
-                
-                response = HttpResponse(pdf, content_type='application/pdf')
-                filename = f'completed_orders_{bulk_order.slug}.pdf'
-                response['Content-Disposition'] = f'attachment; filename="{filename}"'
-                
-                logger.info(f"Generated public paid orders PDF for: {bulk_order.slug}")
-                return response
-                
-            except ImportError:
-                return Response(
-                    {"error": "PDF generation not available"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+                if bulk_order.payment_deadline > now:
+                    days_remaining = (bulk_order.payment_deadline - now).days
+                else:
+                    days_remaining = 0
+            except TypeError:
+                # Handle timezone-naive comparison
+                logger.warning(f"Timezone issue with payment_deadline for {bulk_order.slug}")
+                days_remaining = 0
+            
+            context = {
+                'bulk_order': bulk_order,
+                'size_summary': size_summary,
+                'paid_orders': paid_orders,
+                'total_paid': paid_orders.count(),
+                'recent_orders': list(paid_orders[:20]),  # Convert to list
+                'company_name': settings.COMPANY_NAME,
+                'now': now,
+                'days_remaining': days_remaining,
+            }
+            
+            return render(request, 'bulk_orders/paid_orders_public.html', context)
         
-        # HTML view
-        now = timezone.now()
-        days_remaining = (bulk_order.payment_deadline - now).days if bulk_order.payment_deadline > now else 0
-        
-        context = {
-            'bulk_order': bulk_order,
-            'size_summary': size_summary,
-            'paid_orders': paid_orders,
-            'total_paid': paid_orders.count(),
-            'recent_orders': paid_orders[:20],  # Show 20 most recent
-            'company_name': settings.COMPANY_NAME,
-            'now': now,
-            'days_remaining': days_remaining,
-        }
-        
-        return render(request, 'bulk_orders/paid_orders_public.html', context)
+        except Exception as e:
+            logger.error(f"Error in paid_orders view: {str(e)}", exc_info=True)
+            return Response(
+                {"error": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def analytics(self, request, slug=None):

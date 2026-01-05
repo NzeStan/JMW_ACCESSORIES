@@ -9,4 +9,6 @@ run_ngrok.sh
 sent_emails
 logs
 .env
-test-bulk-orders.ps1
+test-bulk-orders.sh
+get-token.sh
+run-all-tests.sh
