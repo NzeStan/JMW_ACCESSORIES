@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.db.models import Count, Q, Prefetch
 from django.core.paginator import Paginator
 from django.template.loader import render_to_string
@@ -10,12 +10,18 @@ from django.conf import settings
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from datetime import datetime, timedelta
 import json
 import uuid
 from .models import BulkOrderLink, OrderEntry, CouponCode
 from .serializers import BulkOrderLinkSerializer, OrderEntrySerializer, CouponCodeSerializer
 from .utils import generate_receipt, generate_coupon_codes
 from payment.utils import initialize_payment, verify_payment
+from jmw.background_utils import (
+    send_order_confirmation_email,
+    send_payment_receipt_email,
+    generate_payment_receipt_pdf_task
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -70,8 +76,7 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
             bulk_order = BulkOrderLink.objects.prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=OrderEntry.objects.select_related("coupon_used")
-                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
+                    queryset=OrderEntry.objects.filter(paid=True)
                     .order_by("size", "full_name"),
                 )
             ).get(slug=slug)
@@ -131,8 +136,7 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
             bulk_order = BulkOrderLink.objects.prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=OrderEntry.objects.select_related("coupon_used")
-                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
+                    queryset=OrderEntry.objects.filter(paid=True)
                     .order_by("size", "full_name"),
                 )
             ).get(slug=slug)
@@ -267,8 +271,7 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
             bulk_order = BulkOrderLink.objects.prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=OrderEntry.objects.select_related("coupon_used")
-                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
+                    queryset=OrderEntry.objects.filter(paid=True)
                     .order_by("size", "full_name"),
                 )
             ).get(slug=slug)
@@ -583,6 +586,135 @@ class OrderEntryViewSet(viewsets.ModelViewSet):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
+    def paid_orders(self, request, slug=None):
+        """
+        Public page showing all paid orders for social proof.
+        Supports HTML view and PDF download.
+        """
+        bulk_order = self.get_object()
+        
+        # Get only PAID orders
+        paid_orders = bulk_order.orders.filter(paid=True).order_by('-created_at')
+        
+        # Size summary
+        size_summary = (
+            paid_orders.values("size")
+            .annotate(count=Count("size"))
+            .order_by("size")
+        )
+        
+        # Check if download=pdf parameter
+        if request.GET.get('download') == 'pdf':
+            try:
+                from weasyprint import HTML
+                
+                context = {
+                    'bulk_order': bulk_order,
+                    'size_summary': size_summary,
+                    'paid_orders': paid_orders,
+                    'total_paid': paid_orders.count(),
+                    'company_name': settings.COMPANY_NAME,
+                    'company_address': settings.COMPANY_ADDRESS,
+                    'company_phone': settings.COMPANY_PHONE,
+                    'company_email': settings.COMPANY_EMAIL,
+                    'now': timezone.now(),
+                }
+                
+                html_string = render_to_string('bulk_orders/pdf_template.html', context)
+                html = HTML(string=html_string, base_url=request.build_absolute_uri())
+                pdf = html.write_pdf()
+                
+                response = HttpResponse(pdf, content_type='application/pdf')
+                filename = f'completed_orders_{bulk_order.slug}.pdf'
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                
+                logger.info(f"Generated public paid orders PDF for: {bulk_order.slug}")
+                return response
+                
+            except ImportError:
+                return Response(
+                    {"error": "PDF generation not available"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # HTML view
+        now = timezone.now()
+        days_remaining = (bulk_order.payment_deadline - now).days if bulk_order.payment_deadline > now else 0
+        
+        context = {
+            'bulk_order': bulk_order,
+            'size_summary': size_summary,
+            'paid_orders': paid_orders,
+            'total_paid': paid_orders.count(),
+            'recent_orders': paid_orders[:20],  # Show 20 most recent
+            'company_name': settings.COMPANY_NAME,
+            'now': now,
+            'days_remaining': days_remaining,
+        }
+        
+        return render(request, 'bulk_orders/paid_orders_public.html', context)
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def analytics(self, request, slug=None):
+        """Admin analytics endpoint for dashboard"""
+        bulk_order = self.get_object()
+        
+        total_orders = bulk_order.orders.count()
+        paid_orders = bulk_order.orders.filter(paid=True).count()
+        
+        # Size breakdown
+        size_breakdown = list(
+            bulk_order.orders.values('size')
+            .annotate(
+                total=Count('id'),
+                paid=Count('id', filter=Q(paid=True))
+            )
+            .order_by('size')
+        )
+        
+        # Payment timeline (last 7 days)
+        today = timezone.now().date()
+        payment_timeline = []
+        for i in range(7):
+            date = today - timedelta(days=6-i)
+            count = bulk_order.orders.filter(
+                paid=True,
+                updated_at__date=date
+            ).count()
+            payment_timeline.append({
+                'date': date.isoformat(),
+                'count': count
+            })
+        
+        # Coupon usage
+        total_coupons = bulk_order.coupons.count()
+        used_coupons = bulk_order.coupons.filter(is_used=True).count()
+        
+        return Response({
+            'organization': bulk_order.organization_name,
+            'slug': bulk_order.slug,
+            'overview': {
+                'total_orders': total_orders,
+                'paid_orders': paid_orders,
+                'unpaid_orders': total_orders - paid_orders,
+                'payment_percentage': round((paid_orders / total_orders * 100), 2) if total_orders > 0 else 0,
+            },
+            'size_breakdown': size_breakdown,
+            'payment_timeline': payment_timeline,
+            'coupons': {
+                'total': total_coupons,
+                'used': used_coupons,
+                'available': total_coupons - used_coupons,
+                'usage_percentage': round((used_coupons / total_coupons * 100), 2) if total_coupons > 0 else 0,
+            },
+            'timeline': {
+                'created': bulk_order.created_at,
+                'deadline': bulk_order.payment_deadline,
+                'is_expired': bulk_order.is_expired(),
+                'days_remaining': (bulk_order.payment_deadline - timezone.now()).days if not bulk_order.is_expired() else 0,
+            }
+        })
 
 class CouponCodeViewSet(viewsets.ModelViewSet):
     serializer_class = CouponCodeSerializer
@@ -627,61 +759,76 @@ def bulk_order_payment_webhook(request):
     """
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
-    
+
     try:
         payload = json.loads(request.body)
         logger.info(f"Bulk order payment webhook received: {payload}")
-        
-        # Verify webhook is from Paystack
-        event = payload.get('event')
-        if event != 'charge.success':
+
+        # Only handle successful charges
+        if payload.get('event') != 'charge.success':
             return JsonResponse({'status': 'ignored', 'message': 'Not a charge.success event'})
-        
+
         data = payload.get('data', {})
         reference = data.get('reference')
-        status_value = data.get('status')
-        
-        # Verify reference format: ORDER-{bulk_order_id}-{order_entry_id}
+
         if not reference or not reference.startswith('ORDER-'):
             return JsonResponse({'status': 'error', 'message': 'Invalid reference format'})
-        
-        # Extract IDs from reference
+
         try:
-            parts = reference.split('-')
-            bulk_order_id = parts[1]
-            order_entry_id = parts[2]
-        except (IndexError, ValueError):
+            _, bulk_order_id, order_entry_id = reference.split('-')
+        except ValueError:
             logger.error(f"Invalid reference format: {reference}")
             return JsonResponse({'status': 'error', 'message': 'Invalid reference format'})
-        
-        # Verify payment with Paystack
+
+        # Verify payment with Paystack API
         verification_result = verify_payment(reference)
-        
-        if verification_result and verification_result.get('status') and verification_result['data']['status'] == 'success':
-            # Update OrderEntry
-            try:
-                order_entry = OrderEntry.objects.get(id=order_entry_id, bulk_order__id=bulk_order_id)
-                order_entry.paid = True
-                order_entry.save()
-                
-                logger.info(f"Bulk order payment successful: {reference} - OrderEntry {order_entry_id} marked as paid")
-                
-                return JsonResponse({
-                    'status': 'success',
-                    'message': 'Payment verified and order updated',
-                    'order_entry_id': str(order_entry_id)
-                })
-                
-            except OrderEntry.DoesNotExist:
-                logger.error(f"OrderEntry not found: {order_entry_id}")
-                return JsonResponse({'status': 'error', 'message': 'Order entry not found'}, status=404)
-        else:
+
+        if not (
+            verification_result
+            and verification_result.get('status')
+            and verification_result['data']['status'] == 'success'
+        ):
             logger.warning(f"Payment verification failed for reference: {reference}")
             return JsonResponse({'status': 'error', 'message': 'Payment verification failed'}, status=400)
-            
+
+        try:
+            order_entry = OrderEntry.objects.get(
+                id=order_entry_id,
+                bulk_order__id=bulk_order_id
+            )
+
+            # 🔐 IMPORTANT: Idempotency check
+            if order_entry.paid:
+                logger.info(f"Webhook already processed for {reference}")
+                return JsonResponse({'status': 'success', 'message': 'Already processed'})
+
+            order_entry.paid = True
+            order_entry.save(update_fields=['paid'])
+
+            logger.info(
+                f"Bulk order payment successful: {reference} "
+                f"- OrderEntry {order_entry_id} marked as paid"
+            )
+
+            # ✅ SEND PAYMENT RECEIPT EMAIL
+            send_payment_receipt_email(order_entry)
+
+            # ✅ GENERATE PDF RECEIPT (ASYNC / BACKGROUND)
+            generate_payment_receipt_pdf_task(str(order_entry_id))
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Payment verified and order updated',
+                'order_entry_id': str(order_entry_id)
+            })
+
+        except OrderEntry.DoesNotExist:
+            logger.error(f"OrderEntry not found: {order_entry_id}")
+            return JsonResponse({'status': 'error', 'message': 'Order entry not found'}, status=404)
+
     except json.JSONDecodeError:
         logger.error("Invalid JSON in webhook payload")
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     except Exception as e:
-        logger.error(f"Error processing bulk order payment webhook: {str(e)}")
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        logger.exception("Error processing bulk order payment webhook")
+        return JsonResponse({'status': 'error', 'message': 'Internal server error'}, status=500)

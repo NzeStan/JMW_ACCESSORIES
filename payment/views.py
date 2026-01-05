@@ -8,7 +8,6 @@ from .models import PaymentTransaction
 from .utils import initialize_payment, verify_payment
 from order.models import Order
 from order.utils import generate_receipt_pdf, send_receipt_email
-from order.tasks import send_receipt_email_task
 import uuid
 
 class InitializePaymentView(APIView):

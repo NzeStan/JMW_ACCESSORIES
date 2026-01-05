@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     # Third-party utilities
     "django_filters",  # ← ADDED: For DRF filtering (DjangoFilterBackend)
     "whitenoise.runserver_nostatic",
+    'background_task',
     
     # Local apps
     "accounts.apps.AccountsConfig",
@@ -282,17 +283,10 @@ ADMINS = [("Ifeanyi Nnamani", "ifeanyinnamani@jumemegawears.com")]
 SERVER_EMAIL = "server@jumemegawears.com"
 
 # ==============================================================================
-# CELERY CONFIGURATION (Asynchronous Tasks)
+# BACKGROUND TASKS
 # ==============================================================================
-
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/0")
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = "Africa/Lagos"
-
-USE_CELERY_EMAIL = env.bool("USE_CELERY_EMAIL", default=False)
+BACKGROUND_TASK_RUN_ASYNC = True
+BACKGROUND_TASK_ASYNC_THREADS = 4
 
 # ==============================================================================
 # CACHING

@@ -70,6 +70,12 @@ class OrderEntrySerializer(serializers.ModelSerializer):
         if not bulk_order:
             raise serializers.ValidationError({"bulk_order": "Bulk order context is required."})
         
+        # ✅ VALIDATION: Check if bulk order has expired
+        if bulk_order.is_expired():
+            raise serializers.ValidationError({
+                "detail": f"This bulk order link expired on {bulk_order.payment_deadline.strftime('%B %d, %Y')}. No new orders can be placed."
+            })
+        
         attrs['bulk_order'] = bulk_order
         
         # ✅ FIX: Validate custom_name only if branding is enabled
@@ -104,7 +110,11 @@ class OrderEntrySerializer(serializers.ModelSerializer):
         if coupon_used:
             coupon_used.is_used = True
             coupon_used.save()
-            
+        
+        # ✅ SEND ORDER CONFIRMATION EMAIL
+        from jmw.background_utils import send_order_confirmation_email
+        send_order_confirmation_email(instance)
+        
         return instance
 
 class BulkOrderLinkSerializer(serializers.ModelSerializer):

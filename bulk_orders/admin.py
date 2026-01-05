@@ -291,8 +291,7 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             bulk_order = BulkOrderLink.objects.prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=OrderEntry.objects.select_related("coupon_used")
-                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
+                    queryset=OrderEntry.objects.filter(paid=True)
                     .order_by("size", "full_name"),
                 )
             ).get(id=bulk_order.id)
@@ -339,8 +338,7 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             bulk_order = BulkOrderLink.objects.prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=OrderEntry.objects.select_related("coupon_used")
-                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
+                    queryset=OrderEntry.objects.filter(paid=True)
                     .order_by("size", "full_name"),
                 )
             ).get(id=bulk_order.id)
@@ -461,8 +459,7 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             bulk_order = BulkOrderLink.objects.prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=OrderEntry.objects.select_related("coupon_used")
-                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
+                    queryset=OrderEntry.objects.filter(paid=True)
                     .order_by("size", "full_name"),
                 )
             ).get(id=bulk_order.id)

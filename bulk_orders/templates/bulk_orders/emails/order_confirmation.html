@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        .order-details {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .detail-row {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #555;
+            display: inline-block;
+            width: 150px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-size: 12px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✓ Order Confirmed!</h1>
+    </div>
+    
+    <div class="content">
+        <p>Dear <strong>{{ order.full_name }}</strong>,</p>
+        
+        <p>Thank you for placing your order with <strong>{{ bulk_order.organization_name }}</strong>!</p>
+        
+        <div class="order-details">
+            <h3 style="margin-top: 0;">Order Details</h3>
+            <div class="detail-row">
+                <span class="detail-label">Order Number:</span>
+                <span>#{{ order.serial_number }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Size:</span>
+                <span>{{ order.size }}</span>
+            </div>
+            {% if bulk_order.custom_branding_enabled and order.custom_name %}
+            <div class="detail-row">
+                <span class="detail-label">Custom Name:</span>
+                <span>{{ order.custom_name }}</span>
+            </div>
+            {% endif %}
+            <div class="detail-row">
+                <span class="detail-label">Amount:</span>
+                <span style="font-size: 18px; font-weight: bold; color: #4CAF50;">₦{{ bulk_order.price_per_item|floatformat:2 }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Payment Deadline:</span>
+                <span>{{ bulk_order.payment_deadline|date:"F j, Y" }}</span>
+            </div>
+        </div>
+        
+        {% if not order.paid and not order.coupon_used %}
+        <div class="warning">
+            <strong>⚠️ Payment Pending</strong><br>
+            Your order has been recorded but not yet paid. Please complete your payment before the deadline.
+        </div>
+        {% endif %}
+        
+        {% if order.coupon_used %}
+        <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
+            <strong>✓ Coupon Applied</strong><br>
+            Your order was successfully placed using coupon code: <strong>{{ order.coupon_used.code }}</strong>
+        </div>
+        {% endif %}
+        
+        <p style="margin-top: 30px;">If you have any questions, please contact us at {{ company_name }}.</p>
+        
+        <p>Best regards,<br>
+        <strong>{{ company_name }} Team</strong></p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated email. Please do not reply to this message.</p>
+        <p>{{ company_name }}</p>
+    </div>
+</body>
+</html>

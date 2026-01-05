@@ -70,3 +70,7 @@ urlpatterns = [
 
 # EXAMPLE 3: Initialize payment
 # POST /api/bulk_orders/orders/{order_id}/initialize_payment/
+
+# GET    /api/bulk_orders/links/<slug>/paid_orders/               # Public paid orders page
+# GET    /api/bulk_orders/links/<slug>/paid_orders/?download=pdf  # Download paid orders PDF
+# GET    /api/bulk_orders/links/<slug>/analytics/    
