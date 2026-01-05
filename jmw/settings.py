@@ -33,8 +33,13 @@ if not DEBUG:
         "https://jumemegawears.com",
     ]
 else:
-    ALLOWED_HOSTS = [".ngrok-free.app", "localhost", "127.0.0.1"]
+    ALLOWED_HOSTS = [
+        "localhost",
+        "127.0.0.1",
+        ".ngrok-free.app",          
+    ]
     CSRF_TRUSTED_ORIGINS = ["https://*.ngrok-free.app"]
+    
 
 # ==============================================================================
 # APPLICATIONS
