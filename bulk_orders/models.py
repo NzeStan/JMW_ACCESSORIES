@@ -191,4 +191,5 @@ class OrderEntry(models.Model):
             models.Index(fields=["paid"], name="order_paid_idx"),
             models.Index(fields=["size"], name="order_size_idx"),
             models.Index(fields=["created_at"], name="order_created_idx"),
+            models.Index(fields=['updated_at'], name='order_updated_idx'),
         ]

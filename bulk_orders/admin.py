@@ -1,10 +1,9 @@
 # bulk_orders/admin.py
 from django.contrib import admin
 from django.utils.html import format_html
-from django.urls import reverse, path
+from django.urls import reverse
 from django.http import HttpResponse
 from django.db.models import Count, Q, Prefetch
-from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
@@ -14,7 +13,12 @@ from io import BytesIO
 import xlsxwriter
 import logging
 from .models import BulkOrderLink, OrderEntry, CouponCode
-from .utils import generate_coupon_codes
+from .utils import (
+    generate_coupon_codes,
+    generate_bulk_order_pdf,
+    generate_bulk_order_word,
+    generate_bulk_order_excel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -282,46 +286,10 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
     
     generate_coupons_action.short_description = "🎟️ Generate Coupons (50 per order)"
 
-    # Helper methods for document generation (same as in views.py)
     def _generate_pdf(self, request, bulk_order):
-        """Generate PDF - same logic as views.py but for admin"""
+        """Generate PDF using centralized utility"""
         try:
-            from weasyprint import HTML
-            
-            bulk_order = BulkOrderLink.objects.prefetch_related(
-                Prefetch(
-                    "orders",
-                    queryset=OrderEntry.objects.filter(paid=True)
-                    .order_by("size", "full_name"),
-                )
-            ).get(id=bulk_order.id)
-
-            orders = bulk_order.orders.all()
-            size_summary = orders.values("size").annotate(count=Count("size")).order_by("size")
-
-            context = {
-                "bulk_order": bulk_order,
-                "size_summary": size_summary,
-                "orders": orders,
-                "total_orders": orders.count(),
-                "company_name": settings.COMPANY_NAME,
-                "company_address": settings.COMPANY_ADDRESS,
-                "company_phone": settings.COMPANY_PHONE,
-                "company_email": settings.COMPANY_EMAIL,
-                "now": timezone.now(),
-            }
-
-            html_string = render_to_string("bulk_orders/pdf_template.html", context)
-            html = HTML(string=html_string, base_url=request.build_absolute_uri())
-            pdf = html.write_pdf()
-
-            response = HttpResponse(pdf, content_type="application/pdf")
-            filename = f'bulk_order_{bulk_order.slug}_{timezone.now().strftime("%Y%m%d")}.pdf'
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            
-            logger.info(f"Generated PDF for bulk order: {bulk_order.slug}")
-            return response
-
+            return generate_bulk_order_pdf(bulk_order, request)
         except ImportError:
             messages.error(request, "PDF generation not available. Install GTK+ libraries.")
             return None
@@ -329,334 +297,20 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             logger.error(f"Error generating PDF: {str(e)}")
             messages.error(request, f"Error generating PDF: {str(e)}")
             return None
-
+        
     def _generate_word(self, request, bulk_order):
-        """Generate Word document - fixed version from views.py"""
+        """Generate Word document using centralized utility"""
         try:
-            from docx import Document
-            
-            bulk_order = BulkOrderLink.objects.prefetch_related(
-                Prefetch(
-                    "orders",
-                    queryset=OrderEntry.objects.select_related("coupon_used")
-                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
-                    .order_by("size", "full_name"),
-                )
-            ).get(id=bulk_order.id)
-
-            doc = Document()
-            doc.add_heading(settings.COMPANY_NAME, 0)
-            doc.add_heading(f"Bulk Order: {bulk_order.organization_name}", level=1)
-            doc.add_paragraph(f"Generated: {timezone.now().strftime('%B %d, %Y - %I:%M %p')}")
-            doc.add_paragraph(f"Payment Deadline: {bulk_order.payment_deadline.strftime('%B %d, %Y')}")
-            doc.add_paragraph(f"Custom Branding: {'Yes' if bulk_order.custom_branding_enabled else 'No'}")
-            doc.add_paragraph("")
-
-            orders = bulk_order.orders.all()
-
-            # Size Summary
-            doc.add_heading("Summary by Size", level=2)
-            size_summary = (
-                orders.values("size")
-                .annotate(total=Count("id"))
-                .order_by("size")
-            )
-
-            table = doc.add_table(rows=1, cols=2)
-            table.style = "Light Grid Accent 1"
-            header_cells = table.rows[0].cells
-            header_cells[0].text = "Size"
-            header_cells[1].text = "Total"
-
-            for size_info in size_summary:
-                row_cells = table.add_row().cells
-                row_cells[0].text = size_info["size"]
-                row_cells[1].text = str(size_info["total"])
-
-            doc.add_paragraph()
-
-            # Orders by Size
-            paginator = Paginator(orders, 1000)
-            
-            for page_num in paginator.page_range:
-                page = paginator.page(page_num)
-                
-                size_groups = {}
-                for order in page.object_list:
-                    if order.size not in size_groups:
-                        size_groups[order.size] = []
-                    size_groups[order.size].append(order)
-
-                for size, size_orders in sorted(size_groups.items()):
-                    doc.add_heading(f"Size: {size}", level=3)
-
-                    # ✅ FIX: Properly determine column count
-                    if bulk_order.custom_branding_enabled:
-                        table = doc.add_table(rows=1, cols=4)
-                        table.style = "Table Grid"
-                        header_cells = table.rows[0].cells
-                        header_cells[0].text = "S/N"
-                        header_cells[1].text = "Name"
-                        header_cells[2].text = "Custom Name"
-                        header_cells[3].text = "Status"
-                        
-                        for idx, order in enumerate(size_orders, 1):
-                            row_cells = table.add_row().cells
-                            row_cells[0].text = str(idx)
-                            row_cells[1].text = order.full_name
-                            row_cells[2].text = order.custom_name or ''
-                            row_cells[3].text = 'Coupon' if order.coupon_used else 'Paid'
-                    else:
-                        table = doc.add_table(rows=1, cols=3)
-                        table.style = "Table Grid"
-                        header_cells = table.rows[0].cells
-                        header_cells[0].text = "S/N"
-                        header_cells[1].text = "Name"
-                        header_cells[2].text = "Status"
-                        
-                        for idx, order in enumerate(size_orders, 1):
-                            row_cells = table.add_row().cells
-                            row_cells[0].text = str(idx)
-                            row_cells[1].text = order.full_name
-                            row_cells[2].text = 'Coupon' if order.coupon_used else 'Paid'
-
-                    doc.add_paragraph()
-
-            # Footer
-            doc.add_paragraph("")
-            footer_para = doc.add_paragraph()
-            footer_para.add_run(f"{settings.COMPANY_NAME}\n").bold = True
-            footer_para.add_run(f"{settings.COMPANY_ADDRESS}\n")
-            footer_para.add_run(f"📞 {settings.COMPANY_PHONE} | 📧 {settings.COMPANY_EMAIL}")
-
-            buffer = BytesIO()
-            doc.save(buffer)
-            buffer.seek(0)
-
-            response = HttpResponse(
-                buffer.getvalue(),
-                content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            )
-            filename = f'bulk_order_{bulk_order.slug}_{timezone.now().strftime("%Y%m%d")}.docx'
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            
-            logger.info(f"Generated Word for bulk order: {bulk_order.slug}")
-            return response
-
+            return generate_bulk_order_word(bulk_order)
         except Exception as e:
             logger.error(f"Error generating Word document: {str(e)}")
             messages.error(request, f"Error generating Word document: {str(e)}")
             return None
 
     def _generate_excel(self, request, bulk_order):
-        """Generate Excel - complete version with summary at top"""
+        """Generate Excel using centralized utility"""
         try:
-            # Optimized query
-            bulk_order = BulkOrderLink.objects.prefetch_related(
-                Prefetch(
-                    "orders",
-                    queryset=OrderEntry.objects.select_related("coupon_used")
-                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
-                    .order_by("size", "full_name"),
-                )
-            ).get(id=bulk_order.id)
-
-            output = BytesIO()
-            workbook = xlsxwriter.Workbook(output, {"constant_memory": True})
-
-            # ============================================================================
-            # FORMATS
-            # ============================================================================
-            title_format = workbook.add_format({
-                'bold': True, 
-                'font_size': 16,
-                'align': 'left'
-            })
-            
-            subtitle_format = workbook.add_format({
-                'bold': True, 
-                'font_size': 12,
-                'align': 'left'
-            })
-            
-            info_format = workbook.add_format({
-                'font_size': 10,
-                'align': 'left'
-            })
-            
-            section_header_format = workbook.add_format({
-                'bold': True,
-                'font_size': 12,
-                'bg_color': '#4472C4',
-                'font_color': 'white',
-                'align': 'center',
-                'valign': 'vcenter',
-                'border': 1
-            })
-            
-            table_header_format = workbook.add_format({
-                'bold': True,
-                'bg_color': '#D9E1F2',
-                'border': 1,
-                'align': 'center',
-                'valign': 'vcenter'
-            })
-            
-            cell_format = workbook.add_format({
-                'border': 1,
-                'align': 'center',
-                'valign': 'vcenter'
-            })
-            
-            cell_left_format = workbook.add_format({
-                'border': 1,
-                'align': 'left',
-                'valign': 'vcenter'
-            })
-            
-            total_format = workbook.add_format({
-                'bold': True,
-                'bg_color': '#FFF2CC',
-                'border': 1,
-                'align': 'center',
-                'valign': 'vcenter'
-            })
-
-            # ============================================================================
-            # CREATE WORKSHEET
-            # ============================================================================
-            worksheet_name = bulk_order.organization_name[:31]
-            worksheet = workbook.add_worksheet(worksheet_name)
-
-            # ============================================================================
-            # TITLE SECTION
-            # ============================================================================
-            row = 0
-            worksheet.write(row, 0, settings.COMPANY_NAME, title_format)
-            row += 1
-            
-            worksheet.write(row, 0, f"Bulk Order: {bulk_order.organization_name}", subtitle_format)
-            row += 1
-            
-            worksheet.write(row, 0, f"Generated: {timezone.now().strftime('%B %d, %Y - %I:%M %p')}", info_format)
-            row += 1
-            
-            worksheet.write(row, 0, f"Payment Deadline: {bulk_order.payment_deadline.strftime('%B %d, %Y')}", info_format)
-            row += 1
-            
-            worksheet.write(row, 0, f"Custom Branding: {'Yes' if bulk_order.custom_branding_enabled else 'No'}", info_format)
-            row += 2
-
-            # ============================================================================
-            # SIZE SUMMARY SECTION
-            # ============================================================================
-            orders = bulk_order.orders.all()
-            
-            size_summary = orders.values("size").annotate(
-                total=Count("id")
-            ).order_by("size")
-
-            # Section header
-            worksheet.merge_range(row, 0, row, 1, 'SUMMARY BY SIZE', section_header_format)
-            row += 1
-            
-            # Summary table headers
-            summary_headers = ['Size', 'Total']
-            for col, header in enumerate(summary_headers):
-                worksheet.write(row, col, header, table_header_format)
-            row += 1
-            
-            # Summary data
-            grand_total = 0
-            
-            for size_data in size_summary:
-                worksheet.write(row, 0, size_data['size'], cell_format)
-                worksheet.write(row, 1, size_data['total'], cell_format)
-                
-                grand_total += size_data['total']
-                
-                row += 1
-            
-            # Grand total row
-            worksheet.write(row, 0, 'TOTAL', total_format)
-            worksheet.write(row, 1, grand_total, total_format)
-            row += 2
-
-            # ============================================================================
-            # ORDERS SECTION
-            # ============================================================================
-            
-            # Section header
-            if bulk_order.custom_branding_enabled:
-                worksheet.merge_range(row, 0, row, 4, 'ORDER DETAILS', section_header_format)
-            else:
-                worksheet.merge_range(row, 0, row, 3, 'ORDER DETAILS', section_header_format)
-            row += 1
-
-            # Determine headers
-            if bulk_order.custom_branding_enabled:
-                headers = ['S/N', 'Size', 'Name', 'Custom Name', 'Status']
-            else:
-                headers = ['S/N', 'Size', 'Name', 'Status']
-
-            # Write headers
-            for col, header in enumerate(headers):
-                worksheet.write(row, col, header, table_header_format)
-            row += 1
-
-            # Write orders
-            serial_number = 1
-            for order in orders:
-                col = 0
-                
-                worksheet.write(row, col, serial_number, cell_format)
-                col += 1
-                
-                worksheet.write(row, col, order.size, cell_format)
-                col += 1
-                
-                worksheet.write(row, col, order.full_name, cell_left_format)
-                col += 1
-                
-                if bulk_order.custom_branding_enabled:
-                    worksheet.write(row, col, order.custom_name or '', cell_left_format)
-                    col += 1
-                
-                status_text = 'Coupon' if order.coupon_used else 'Paid'
-                worksheet.write(row, col, status_text, cell_format)
-                
-                row += 1
-                serial_number += 1
-
-            # ============================================================================
-            # COLUMN WIDTHS
-            # ============================================================================
-            worksheet.set_column(0, 0, 6)   # S/N
-            worksheet.set_column(1, 1, 8)   # Size
-            worksheet.set_column(2, 2, 30)  # Name
-            
-            if bulk_order.custom_branding_enabled:
-                worksheet.set_column(3, 3, 30)  # Custom Name
-                worksheet.set_column(4, 4, 12)  # Status
-            else:
-                worksheet.set_column(3, 3, 12)  # Status
-
-            # ============================================================================
-            # FINALIZE
-            # ============================================================================
-            workbook.close()
-            output.seek(0)
-
-            response = HttpResponse(
-                output.read(),
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-            filename = f'bulk_order_{bulk_order.slug}_{timezone.now().strftime("%Y%m%d")}.xlsx'
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            
-            logger.info(f"Generated Excel for bulk order: {bulk_order.slug}")
-            return response
-
+            return generate_bulk_order_excel(bulk_order)
         except Exception as e:
             logger.error(f"Error generating Excel: {str(e)}")
             messages.error(request, f"Error generating Excel: {str(e)}")
