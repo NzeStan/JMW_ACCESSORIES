@@ -338,7 +338,8 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             bulk_order = BulkOrderLink.objects.prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=OrderEntry.objects.filter(paid=True)
+                    queryset=OrderEntry.objects.select_related("coupon_used")
+                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
                     .order_by("size", "full_name"),
                 )
             ).get(id=bulk_order.id)
@@ -347,7 +348,6 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             doc.add_heading(settings.COMPANY_NAME, 0)
             doc.add_heading(f"Bulk Order: {bulk_order.organization_name}", level=1)
             doc.add_paragraph(f"Generated: {timezone.now().strftime('%B %d, %Y - %I:%M %p')}")
-            doc.add_paragraph(f"Price per Item: ₦{bulk_order.price_per_item:,.2f}")
             doc.add_paragraph(f"Payment Deadline: {bulk_order.payment_deadline.strftime('%B %d, %Y')}")
             doc.add_paragraph(f"Custom Branding: {'Yes' if bulk_order.custom_branding_enabled else 'No'}")
             doc.add_paragraph("")
@@ -356,26 +356,22 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
 
             # Size Summary
             doc.add_heading("Summary by Size", level=2)
-            size_summary = orders.values("size").annotate(
-                total=Count("id"),
-                paid=Count("id", filter=Q(paid=True)),
-                coupon=Count("id", filter=Q(coupon_used__isnull=False)),
-            ).order_by("size")
+            size_summary = (
+                orders.values("size")
+                .annotate(total=Count("id"))
+                .order_by("size")
+            )
 
-            table = doc.add_table(rows=1, cols=4)
+            table = doc.add_table(rows=1, cols=2)
             table.style = "Light Grid Accent 1"
             header_cells = table.rows[0].cells
             header_cells[0].text = "Size"
             header_cells[1].text = "Total"
-            header_cells[2].text = "Paid"
-            header_cells[3].text = "Coupon"
 
             for size_info in size_summary:
                 row_cells = table.add_row().cells
                 row_cells[0].text = size_info["size"]
                 row_cells[1].text = str(size_info["total"])
-                row_cells[2].text = str(size_info["paid"])
-                row_cells[3].text = str(size_info["coupon"])
 
             doc.add_paragraph()
 
@@ -459,7 +455,8 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             bulk_order = BulkOrderLink.objects.prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=OrderEntry.objects.filter(paid=True)
+                    queryset=OrderEntry.objects.select_related("coupon_used")
+                    .filter(Q(paid=True) | Q(coupon_used__isnull=False))
                     .order_by("size", "full_name"),
                 )
             ).get(id=bulk_order.id)
@@ -544,9 +541,6 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             worksheet.write(row, 0, f"Generated: {timezone.now().strftime('%B %d, %Y - %I:%M %p')}", info_format)
             row += 1
             
-            worksheet.write(row, 0, f"Price per Item: ₦{bulk_order.price_per_item:,.2f}", info_format)
-            row += 1
-            
             worksheet.write(row, 0, f"Payment Deadline: {bulk_order.payment_deadline.strftime('%B %d, %Y')}", info_format)
             row += 1
             
@@ -559,43 +553,33 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
             orders = bulk_order.orders.all()
             
             size_summary = orders.values("size").annotate(
-                total=Count("id"),
-                paid=Count("id", filter=Q(paid=True)),
-                coupon=Count("id", filter=Q(coupon_used__isnull=False)),
+                total=Count("id")
             ).order_by("size")
 
             # Section header
-            worksheet.merge_range(row, 0, row, 3, 'SUMMARY BY SIZE', section_header_format)
+            worksheet.merge_range(row, 0, row, 1, 'SUMMARY BY SIZE', section_header_format)
             row += 1
             
             # Summary table headers
-            summary_headers = ['Size', 'Total', 'Paid', 'Coupon']
+            summary_headers = ['Size', 'Total']
             for col, header in enumerate(summary_headers):
                 worksheet.write(row, col, header, table_header_format)
             row += 1
             
             # Summary data
             grand_total = 0
-            grand_paid = 0
-            grand_coupon = 0
             
             for size_data in size_summary:
                 worksheet.write(row, 0, size_data['size'], cell_format)
                 worksheet.write(row, 1, size_data['total'], cell_format)
-                worksheet.write(row, 2, size_data['paid'], cell_format)
-                worksheet.write(row, 3, size_data['coupon'], cell_format)
                 
                 grand_total += size_data['total']
-                grand_paid += size_data['paid']
-                grand_coupon += size_data['coupon']
                 
                 row += 1
             
             # Grand total row
             worksheet.write(row, 0, 'TOTAL', total_format)
             worksheet.write(row, 1, grand_total, total_format)
-            worksheet.write(row, 2, grand_paid, total_format)
-            worksheet.write(row, 3, grand_coupon, total_format)
             row += 2
 
             # ============================================================================
