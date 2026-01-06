@@ -41,12 +41,12 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
         if self.request.user.is_authenticated:
             return BulkOrderLink.objects.filter(created_by=self.request.user)
         return BulkOrderLink.objects.none()
-    
+
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def generate_coupons(self, request, slug=None):
         """Generate coupons for a bulk order"""
         bulk_order = self.get_object()
-        count = request.data.get('count', 50)
+        count = int(request.data.get('count', 50))
         
         if bulk_order.coupons.count() > 0:
             return Response(
@@ -68,15 +68,21 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-    @cache_response(timeout=60*5, key_func='calculate_cache_key')
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
     def paid_orders(self, request, slug=None):
         """
         Public page showing all paid orders for social proof.
         Supports HTML view and PDF download.
         """
         try:
-            bulk_order = self.get_object()
+            # Allow public access - get object directly by slug
+            try:
+                bulk_order = BulkOrderLink.objects.get(slug=slug)
+            except BulkOrderLink.DoesNotExist:
+                return Response(
+                    {"error": "Bulk order not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
             
             # Get only PAID orders
             paid_orders = bulk_order.orders.filter(paid=True).order_by('-created_at')
@@ -269,10 +275,17 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
     def stats(self, request, slug=None):
         """Get statistics for this specific bulk order"""
-        bulk_order = self.get_object()
+        # Allow public access - get object directly by slug
+        try:
+            bulk_order = BulkOrderLink.objects.get(slug=slug)
+        except BulkOrderLink.DoesNotExist:
+            return Response(
+                {"error": "Bulk order not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
         total_orders = bulk_order.orders.count()
         paid_orders = bulk_order.orders.filter(paid=True).count()
         
@@ -294,7 +307,14 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.AllowAny])
     def submit_order(self, request, slug=None):
         """Submit order for this bulk order (no need for bulk_order_slug in body!)"""
-        bulk_order = self.get_object()
+        # Allow public access - get object directly by slug
+        try:
+            bulk_order = BulkOrderLink.objects.get(slug=slug)
+        except BulkOrderLink.DoesNotExist:
+            return Response(
+                {"error": "Bulk order not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
         
         # Pass bulk_order via context
         serializer = OrderEntrySerializer(
@@ -417,8 +437,24 @@ def bulk_order_payment_webhook(request):
             return JsonResponse({'status': 'error', 'message': 'Invalid reference format'})
 
         try:
-            _, bulk_order_id, order_entry_id = reference.split('-')
-        except ValueError:
+            # Format: ORDER-{bulk_order_id}-{order_entry_id}
+            # Since IDs are UUIDs with hyphens, we need to parse carefully
+            parts = reference.split('-', 1)  # Split into ['ORDER', 'rest']
+            if len(parts) != 2:
+                raise ValueError("Invalid format")
+
+            rest = parts[1]  # Everything after 'ORDER-'
+            # Find the last UUID (order_entry_id) - UUIDs have 5 parts separated by hyphens
+            # Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+            # We need to split this into bulk_order_id and order_entry_id
+            rest_parts = rest.split('-')
+            if len(rest_parts) < 10:  # 2 UUIDs = 10 parts (5 + 5)
+                raise ValueError("Invalid UUID format")
+
+            # Last 5 parts are order_entry_id, rest before that is bulk_order_id
+            order_entry_id = '-'.join(rest_parts[-5:])
+            bulk_order_id = '-'.join(rest_parts[:-5])
+        except (ValueError, IndexError):
             logger.error(f"Invalid reference format: {reference}")
             return JsonResponse({'status': 'error', 'message': 'Invalid reference format'})
 

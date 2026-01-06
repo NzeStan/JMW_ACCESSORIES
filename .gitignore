@@ -9,6 +9,15 @@ run_ngrok.sh
 sent_emails
 logs
 .env
+
+############################
 test-bulk-orders.sh
 get-token.sh
 run-all-tests.sh
+BULK_ORDERS_COMPLETE_TEST_SUMMARY.md
+BULK_ORDERS_VIEW_TESTS_COMPLETED.md
+CART_APP_IMPROVEMENTS.md
+CART_FIXES_APPLIED.md
+CART_TEST_FIXES_ROUND2.md
+FINAL_SESSION_SUMMARY.md
+SESSION_SUMMARY.md

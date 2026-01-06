@@ -168,14 +168,14 @@ class BulkOrderLinkViewSetTest(APITestCase):
     def test_generate_coupons_action_success(self):
         """Test generating coupons successfully"""
         self.client.force_authenticate(user=self.admin_user)
-        
+
         url = reverse('bulk_orders:bulk-link-generate-coupons', kwargs={'slug': self.bulk_order.slug})
         response = self.client.post(url, {'count': 25})
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 25)
         self.assertIn('sample_codes', response.data)
-        
+
         # Verify coupons were created
         self.assertEqual(self.bulk_order.coupons.count(), 25)
 
@@ -192,8 +192,7 @@ class BulkOrderLinkViewSetTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('already has', response.data['error'])
 
-    @patch('bulk_orders.views.render')
-    def test_paid_orders_html_view(self, mock_render):
+    def test_paid_orders_html_view(self):
         """Test paid_orders action returns HTML view"""
         # Create some paid orders
         OrderEntry.objects.create(
@@ -203,29 +202,39 @@ class BulkOrderLinkViewSetTest(APITestCase):
             size="L",
             paid=True
         )
-        
-        mock_render.return_value = Mock(status_code=200)
-        
+
         url = reverse('bulk_orders:bulk-link-paid-orders', kwargs={'slug': self.bulk_order.slug})
         response = self.client.get(url)
-        
-        # Should call render (HTML template)
-        self.assertTrue(mock_render.called)
 
-    @patch('bulk_orders.views.generate_bulk_order_pdf')
-    def test_paid_orders_pdf_download(self, mock_generate_pdf):
+        # Should return 200 and render template
+        self.assertEqual(response.status_code, 200)
+        # Name is rendered in uppercase in the template
+        self.assertIn(b'PAID USER 1', response.content)
+
+    @patch('weasyprint.HTML')
+    def test_paid_orders_pdf_download(self, mock_html_class):
         """Test paid_orders with download=pdf parameter"""
-        self.client.force_authenticate(user=self.admin_user)
-        
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_generate_pdf.return_value = mock_response
-        
+        # Create a paid order
+        OrderEntry.objects.create(
+            bulk_order=self.bulk_order,
+            email="paid@example.com",
+            full_name="Paid User",
+            size="L",
+            paid=True
+        )
+
+        # Mock weasyprint HTML class
+        mock_html_instance = Mock()
+        mock_html_instance.write_pdf.return_value = b'PDF content'
+        mock_html_class.return_value = mock_html_instance
+
         url = reverse('bulk_orders:bulk-link-paid-orders', kwargs={'slug': self.bulk_order.slug})
         response = self.client.get(url, {'download': 'pdf'})
-        
-        # Should call PDF generation
-        self.assertTrue(mock_generate_pdf.called)
+
+        # Should return PDF response
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(mock_html_class.called)
 
     def test_analytics_action_requires_admin(self):
         """Test that analytics requires admin permission"""
@@ -273,42 +282,42 @@ class BulkOrderLinkViewSetTest(APITestCase):
     def test_download_pdf_action(self, mock_generate_pdf):
         """Test download_pdf action"""
         self.client.force_authenticate(user=self.admin_user)
-        
-        mock_response = Mock()
-        mock_response.status_code = 200
+
+        from django.http import HttpResponse
+        mock_response = HttpResponse(b'PDF content', content_type='application/pdf')
         mock_generate_pdf.return_value = mock_response
-        
+
         url = reverse('bulk_orders:bulk-link-download-pdf', kwargs={'slug': self.bulk_order.slug})
         response = self.client.get(url)
-        
+
         self.assertTrue(mock_generate_pdf.called)
 
     @patch('bulk_orders.views.generate_bulk_order_word')
     def test_download_word_action(self, mock_generate_word):
         """Test download_word action"""
         self.client.force_authenticate(user=self.admin_user)
-        
-        mock_response = Mock()
-        mock_response.status_code = 200
+
+        from django.http import HttpResponse
+        mock_response = HttpResponse(b'Word content', content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
         mock_generate_word.return_value = mock_response
-        
+
         url = reverse('bulk_orders:bulk-link-download-word', kwargs={'slug': self.bulk_order.slug})
         response = self.client.get(url)
-        
+
         self.assertTrue(mock_generate_word.called)
 
     @patch('bulk_orders.views.generate_bulk_order_excel')
     def test_generate_size_summary_action(self, mock_generate_excel):
         """Test generate_size_summary (Excel) action"""
         self.client.force_authenticate(user=self.admin_user)
-        
-        mock_response = Mock()
-        mock_response.status_code = 200
+
+        from django.http import HttpResponse
+        mock_response = HttpResponse(b'Excel content', content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         mock_generate_excel.return_value = mock_response
-        
+
         url = reverse('bulk_orders:bulk-link-generate-size-summary', kwargs={'slug': self.bulk_order.slug})
         response = self.client.get(url)
-        
+
         self.assertTrue(mock_generate_excel.called)
 
     def test_stats_action_public(self):
@@ -854,19 +863,20 @@ class PermissionTest(APITestCase):
                 f"{url_name} should allow admin access"
             )
 
-    def test_public_actions(self):
+    @patch('jmw.background_utils.send_order_confirmation_email')
+    def test_public_actions(self, mock_email):
         """Test actions that allow any access"""
         public_actions = [
             ('bulk_orders:bulk-link-stats', {'slug': self.bulk_order.slug}),
             ('bulk_orders:bulk-link-paid-orders', {'slug': self.bulk_order.slug}),
             ('bulk_orders:bulk-link-submit-order', {'slug': self.bulk_order.slug}),
         ]
-        
+
         for url_name, kwargs in public_actions:
             # Test without authentication
             self.client.force_authenticate(user=None)
             url = reverse(url_name, kwargs=kwargs)
-            
+
             if 'submit-order' in url_name:
                 response = self.client.post(url, {
                     'email': 'test@example.com',
@@ -875,7 +885,7 @@ class PermissionTest(APITestCase):
                 })
             else:
                 response = self.client.get(url)
-            
+
             self.assertNotEqual(
                 response.status_code,
                 status.HTTP_403_FORBIDDEN,
