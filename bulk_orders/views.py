@@ -13,7 +13,7 @@ from datetime import timedelta
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.cache import cache_page
 import json
-import uuid
+from rest_framework_extensions.cache.decorators import cache_response
 from .models import BulkOrderLink, OrderEntry, CouponCode
 from .serializers import BulkOrderLinkSerializer, OrderEntrySerializer, CouponCodeSerializer
 from payment.utils import initialize_payment, verify_payment
@@ -68,8 +68,8 @@ class BulkOrderLinkViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
-    @cache_page(60 * 5)  # Cache for 5 minutes
+    @cache_response(timeout=60*5, key_func='calculate_cache_key')
+    @action(detail=True, methods=['get'])
     def paid_orders(self, request, slug=None):
         """
         Public page showing all paid orders for social proof.

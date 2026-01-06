@@ -30,3 +30,4 @@ django-cloudinary-storage==0.3.0
 django-filter==24.3
 django-ratelimit==4.1.0
 pyngrok==7.5.0
+drf-extensions==0.8.0
