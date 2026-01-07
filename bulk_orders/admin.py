@@ -176,8 +176,8 @@ class BulkOrderLinkAdmin(admin.ModelAdmin):
         return super().change_view(request, object_id, form_url, extra_context)
 
     def slug_display(self, obj):
-        return format_html('<code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">{}</code>', obj.slug)
-    slug_display.short_description = "URL Slug"
+        return obj.slug
+
 
     def shareable_link(self, obj):
         """Display the shareable link for easy copying"""

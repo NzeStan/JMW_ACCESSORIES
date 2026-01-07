@@ -9,6 +9,7 @@ run_ngrok.sh
 sent_emails
 logs
 .env
+media/
 
 ############################
 test-bulk-orders.sh
