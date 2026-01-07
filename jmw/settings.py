@@ -8,6 +8,7 @@ Only contains what's needed for a REST API backend.
 from pathlib import Path
 from environs import Env
 import os
+from datetime import timedelta
 
 env = Env()
 env.read_env()
@@ -50,7 +51,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",  # Keep for admin panel
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    "django.contrib.sessions",  # ← ADDED: Required for admin login and allauth
+    "django.contrib.sessions",  # Required for admin login and allauth
     "django.contrib.messages",  # Needed for admin
     "django.contrib.staticfiles",  # Needed for admin static files
     "django.contrib.sites",  # Required by allauth
@@ -69,7 +70,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.github",
     
     # Third-party utilities
-    "django_filters",  # ← ADDED: For DRF filtering (DjangoFilterBackend)
+    "django_filters",  # For DRF filtering (DjangoFilterBackend)
     "whitenoise.runserver_nostatic",
     'background_task',
     
@@ -145,85 +146,174 @@ DATABASES = {
 }
 
 # ==============================================================================
-# AUTHENTICATION & PASSWORDS
+# AUTHENTICATION & PASSWORDS - ENHANCED
 # ==============================================================================
 
-AUTH_USER_MODEL = "accounts.CustomUser"
-
-AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
-]
-
-AUTHENTICATION_BACKENDS = (
-    "django.contrib.auth.backends.ModelBackend",
-    "allauth.account.auth_backends.AuthenticationBackend",
-)
-
-# ==============================================================================
-# DJANGO-ALLAUTH CONFIGURATION
-# ==============================================================================
-
-SITE_ID = 1
-
-# Account settings
-ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_EMAIL_VERIFICATION = "optional" #"mandatory"
-
-# Social account settings
-SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
-SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_LOGIN_ON_GET = True
-SOCIALACCOUNT_USERNAME_REQUIRED = False
-SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
-SOCIALACCOUNT_AVATAR_SUPPORT = False
-
-# Provider specific settings
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "APP": {
-            "client_id": env("GOOGLE_CLIENT_ID"),
-            "secret": env("GOOGLE_SECRET"),
-        },
-        "SCOPE": ["profile", "email"],
-    },
-    "github": {
-        "APP": {
-            "client_id": env("GITHUB_CLIENT_ID"),
-            "secret": env("GITHUB_SECRET"),
-        },
-        "SCOPE": ["read:user", "user:email"],
-    },
+# JWT Configuration
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60 if DEBUG else 15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7 if DEBUG else 1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    'JWK_URL': None,
+    'LEEWAY': 0,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+    'JTI_CLAIM': 'jti',
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=60 if DEBUG else 15),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=7 if DEBUG else 1),
 }
 
-# ==============================================================================
-# REST FRAMEWORK & JWT
-# ==============================================================================
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
+# Dynamic REST Framework Configuration
+REST_FRAMEWORK_CONFIG = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
 }
 
+# Add JWT or Session based on environment
+if DEBUG:
+    REST_FRAMEWORK_CONFIG['DEFAULT_AUTHENTICATION_CLASSES'] = [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ]
+else:
+    REST_FRAMEWORK_CONFIG['DEFAULT_AUTHENTICATION_CLASSES'] = [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ]
+
+REST_FRAMEWORK = REST_FRAMEWORK_CONFIG
+
+AUTH_USER_MODEL = "accounts.CustomUser"
+
+# REST Auth Configuration
 REST_AUTH = {
-    "USE_JWT": True,
-    "JWT_AUTH_COOKIE": "jmw-auth",
-    "JWT_AUTH_REFRESH_COOKIE": "jmw-refresh-token",
+    "USE_JWT": not DEBUG,  # Use JWT in production only
+    "JWT_AUTH_HTTPONLY": False if DEBUG else True,  # HttpOnly cookies in production
+    "JWT_AUTH_COOKIE": "access",
+    "JWT_AUTH_REFRESH_COOKIE": "refresh",
+    "JWT_AUTH_SECURE": not DEBUG,  # Secure cookies in production
+    "JWT_AUTH_SAMESITE": "Lax" if DEBUG else "Strict",
     "USER_DETAILS_SERIALIZER": "accounts.serializers.CustomUserSerializer",
     "REGISTER_SERIALIZER": "accounts.serializers.CustomRegisterSerializer",
+    "LOGIN_SERIALIZER": "accounts.serializers.CustomLoginSerializer",
+    "PASSWORD_RESET_SERIALIZER": "accounts.serializers.CustomPasswordResetSerializer",
+    "PASSWORD_RESET_CONFIRM_SERIALIZER": "accounts.serializers.CustomPasswordResetConfirmSerializer",
+    "SESSION_LOGIN": DEBUG,  # Use session login in development
+}
+
+# Allauth Enhanced Configuration
+ACCOUNT_ADAPTER = 'accounts.adapters.CustomAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.CustomSocialAccountAdapter'
+
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_VERIFICATION = "mandatory" if not DEBUG else "optional"
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_LOGOUT_ON_GET = True
+ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
+ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
+
+SITE_ID = 1
+
+# Password validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {
+            'max_similarity': 0.7,
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = (
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+)
+
+# Social Account Settings
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_LOGIN_ON_GET = False  # Changed to False for security
+SOCIALACCOUNT_USERNAME_REQUIRED = False
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_AVATAR_SUPPORT = False
+SOCIALACCOUNT_STORE_TOKENS = True
+
+# Callback URL for OAuth
+SOCIAL_AUTH_CALLBACK_URL = "http://localhost:3000" if DEBUG else "https://jumemegawears.com/auth/callback"
+
+# Social Providers - Enhanced
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": env("GOOGLE_CLIENT_ID"),
+            "secret": env("GOOGLE_SECRET"),
+            "key": ""
+        },
+        "SCOPE": [
+            "profile",
+            "email",
+            "openid",
+        ],
+        "AUTH_PARAMS": {
+            "access_type": "online",
+            "prompt": "select_account",
+        },
+        "OAUTH_PKCE_ENABLED": True,
+    },
+    "github": {
+        "APP": {
+            "client_id": env("GITHUB_CLIENT_ID"),
+            "secret": env("GITHUB_SECRET"),
+            "key": ""
+        },
+        "SCOPE": [
+            "read:user",
+            "user:email",
+        ],
+        "AUTH_PARAMS": {
+            "allow_signup": "true"
+        },
+    },
 }
 
 # ==============================================================================

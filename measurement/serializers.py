@@ -11,3 +11,7 @@ class MeasurementSerializer(serializers.ModelSerializer):
         # Assign current user to measurement
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data['user'] = instance.user
+        return super().update(instance, validated_data)
