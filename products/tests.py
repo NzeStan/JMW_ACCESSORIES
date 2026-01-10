@@ -244,7 +244,8 @@ class ProductQuerySetTest(TestCase):
             type="kakhi",
             price=Decimal("5000.00"),
             available=True,
-            out_of_stock=False
+            out_of_stock=False,
+            description="Special testing product"  # ✅ ADD THIS LINE
         )
         self.out_of_stock_kit = NyscKit.objects.create(
             name="Out of Stock Kit",
@@ -283,8 +284,7 @@ class ProductQuerySetTest(TestCase):
 
     def test_search_queryset(self):
         """Test the search() queryset method."""
-        # ✅ Use a more specific search term that only matches one product
-        results = NyscKit.objects.search("Available product")  # Or use the exact description
+        results = NyscKit.objects.search("Special")  # ✅ CHANGE THIS LINE
         self.assertEqual(results.count(), 1)
         self.assertIn(self.available_kit, results)
 
@@ -467,9 +467,9 @@ class ChurchAPITest(APITestCase):
             product_type="church"
         )
         self.church_product = Church.objects.create(
-            name="Anglican",
+            name="Quality RCCG Shirt",  # ✅ Use valid product name from CHURCH_PRODUCT_NAME
             category=self.category,
-            church="anglican",
+            church="RCCG",  # ✅ Changed from "anglican" to "RCCG"
             price=Decimal("8000.00")
         )
 
@@ -484,12 +484,11 @@ class ChurchAPITest(APITestCase):
         # ✅ Fixed: Use correct URL path
         response = self.client.get(f'/api/products/church-items/{self.church_product.slug}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['name'], "Anglican")
+        self.assertEqual(response.data['name'], "Quality RCCG Shirt")
 
     def test_filter_by_church(self):
         """Test filtering Church products by church."""
-        # ✅ Fixed: Use correct URL path
-        response = self.client.get('/api/products/church-items/?church=anglican')
+        response = self.client.get('/api/products/church-items/?church=RCCG')  # ✅ Changed filter value
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_church_product_read_only(self):

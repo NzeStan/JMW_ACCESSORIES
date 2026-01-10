@@ -345,7 +345,8 @@ class OrderAPITest(APITestCase):
     def test_order_list_requires_authentication(self):
         """Test that listing orders requires authentication."""
         response = self.client.get('/api/order/orders/')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        # ✅ DRF returns 403 when IsAuthenticated permission fails for unauthenticated users
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_user_can_only_see_own_orders(self):
         """Test that users can only see their own orders."""

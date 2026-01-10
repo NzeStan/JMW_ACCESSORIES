@@ -151,6 +151,7 @@ class VerifyPaymentView(APIView):
                     # Update order as paid
                     order = payment_transaction.order
                     order.paid = True
+                    order.status = 'paid'  
                     order.save()
 
                     logger.info(f"Payment verified successfully: {reference}")
