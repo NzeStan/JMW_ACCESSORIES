@@ -41,7 +41,8 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Prefetch related products for efficient queries"""
-        return Category.objects.prefetch_related('nysckit_set', 'nysctour_set', 'church_set')
+        # ✅ Fixed: Use correct related_name (plural 's' not '_set')
+        return Category.objects.prefetch_related('nysckits', 'nysctours', 'churchs')
 
 
 class BaseProductViewSet(viewsets.ReadOnlyModelViewSet):

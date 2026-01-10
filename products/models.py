@@ -44,13 +44,19 @@ class SoftDeleteManager(models.Manager):
     """Manager that implements soft delete functionality."""
 
     def get_queryset(self):
-        return SoftDeleteQuerySet(self.model, using=self._db)
+        # ✅ Fixed: Filter out soft-deleted items by default
+        return SoftDeleteQuerySet(self.model, using=self._db).alive()
 
     def alive(self):
         return self.get_queryset().alive()
 
     def dead(self):
-        return self.get_queryset().dead()
+        # ✅ Need to bypass the alive() filter to get dead items
+        return SoftDeleteQuerySet(self.model, using=self._db).dead()
+    
+    def all_with_deleted(self):
+        """Return all objects including soft-deleted ones"""
+        return SoftDeleteQuerySet(self.model, using=self._db)
 
 
 class SoftDeleteModel(models.Model):

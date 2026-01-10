@@ -1,16 +1,23 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, permissions
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from .serializers import PaymentInitializeSerializer, PaymentVerifySerializer, PaymentTransactionSerializer
+from .serializers import (
+    PaymentInitializeSerializer, 
+    PaymentVerifySerializer, 
+    PaymentTransactionSerializer
+)
 from .models import PaymentTransaction
 from .utils import initialize_payment, verify_payment
 from order.models import Order
-from jmw.background_utils import send_payment_receipt_email_async, generate_payment_receipt_pdf_task
+from jmw.background_utils import (
+    send_payment_receipt_email_async, 
+    generate_payment_receipt_pdf_task
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -27,6 +34,8 @@ class PaymentVerifyRateThrottle(UserRateThrottle):
 
 
 class InitializePaymentView(APIView):
+    # ✅ Added: Allow anyone to initialize payment (for guest checkout)
+    permission_classes = [permissions.AllowAny]
     throttle_classes = [PaymentInitializeRateThrottle]
 
     @transaction.atomic
@@ -103,6 +112,8 @@ class InitializePaymentView(APIView):
 
 
 class VerifyPaymentView(APIView):
+    # ✅ Added: Allow anyone to verify payment (webhook/callback verification)
+    permission_classes = [permissions.AllowAny]
     throttle_classes = [PaymentVerifyRateThrottle]
 
     @transaction.atomic
@@ -111,67 +122,57 @@ class VerifyPaymentView(APIView):
         if serializer.is_valid():
             reference = serializer.validated_data['reference']
 
-            # Idempotency check - if already verified, return success
-            try:
-                payment_transaction = PaymentTransaction.objects.select_for_update().get(reference=reference)
+            # Get payment transaction
+            payment_transaction = get_object_or_404(
+                PaymentTransaction,
+                reference=reference
+            )
 
-                if payment_transaction.status == 'success':
-                    logger.info(f"Payment already verified: {reference}")
-                    return Response({
-                        "status": "success",
-                        "message": "Payment already verified"
-                    })
-
-            except PaymentTransaction.DoesNotExist:
-                logger.error(f"Transaction not found: {reference}")
-                return Response(
-                    {"error": "Transaction not found"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Verify with Paystack
-            res = verify_payment(reference)
-
-            if res and res.get('status') and res['data']['status'] == 'success':
-                # Update payment transaction
-                payment_transaction.status = 'success'
-                payment_transaction.paystack_reference = res['data'].get('reference')
-                payment_transaction.verified_at = timezone.now()
-                payment_transaction.save()
-
-                # Update associated order(s)
-                if payment_transaction.order:
-                    order = payment_transaction.order
-                    order.paid = True
-                    order.status = 'paid'
-                    order.save()
-                    logger.info(f"Order marked as paid: {order.reference}")
-
-                # Update legacy orders M2M
-                for order in payment_transaction.orders.all():
-                    if not order.paid:
-                        order.paid = True
-                        order.status = 'paid'
-                        order.save()
-
-                # Send payment receipt email asynchronously
-                try:
-                    send_payment_receipt_email_async(str(payment_transaction.id))
-                    logger.info(f"Payment receipt email queued for payment: {payment_transaction.reference}")
-                except Exception as e:
-                    logger.error(f"Failed to queue payment receipt email for {payment_transaction.reference}: {str(e)}")
-
-                # Queue PDF receipt generation in background
-                try:
-                    generate_payment_receipt_pdf_task(str(payment_transaction.id))
-                    logger.info(f"Payment receipt PDF task queued for payment: {payment_transaction.reference}")
-                except Exception as e:
-                    logger.error(f"Failed to queue payment receipt PDF for {payment_transaction.reference}: {str(e)}")
-
+            # Idempotency: If already verified as success, return success
+            if payment_transaction.status == 'success':
+                logger.info(f"Payment already verified: {reference}")
                 return Response({
                     "status": "success",
-                    "message": "Payment verified successfully"
+                    "message": "Payment already verified"
                 })
+
+            # Verify payment with Paystack
+            verification_result = verify_payment(reference)
+
+            if verification_result and verification_result.get('status'):
+                data = verification_result.get('data', {})
+
+                if data.get('status') == 'success':
+                    # Update payment transaction
+                    payment_transaction.status = 'success'
+                    payment_transaction.verified_at = timezone.now()
+                    payment_transaction.save()
+
+                    # Update order as paid
+                    order = payment_transaction.order
+                    order.paid = True
+                    order.save()
+
+                    logger.info(f"Payment verified successfully: {reference}")
+
+                    # Send payment receipt email asynchronously
+                    try:
+                        send_payment_receipt_email_async(str(payment_transaction.id))
+                        logger.info(f"Payment receipt email queued for payment: {payment_transaction.reference}")
+                    except Exception as e:
+                        logger.error(f"Failed to queue payment receipt email for {payment_transaction.reference}: {str(e)}")
+
+                    # Queue PDF receipt generation in background
+                    try:
+                        generate_payment_receipt_pdf_task(str(payment_transaction.id))
+                        logger.info(f"Payment receipt PDF task queued for payment: {payment_transaction.reference}")
+                    except Exception as e:
+                        logger.error(f"Failed to queue payment receipt PDF for {payment_transaction.reference}: {str(e)}")
+
+                    return Response({
+                        "status": "success",
+                        "message": "Payment verified successfully"
+                    })
 
             # Payment verification failed
             payment_transaction.status = 'failed'
@@ -189,6 +190,8 @@ class VerifyPaymentView(APIView):
 class PaymentTransactionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PaymentTransaction.objects.select_related('order').prefetch_related('orders')
     serializer_class = PaymentTransactionSerializer
+    # ✅ Added: Require authentication to list payment transactions
+    permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [UserRateThrottle]
 
     def get_queryset(self):

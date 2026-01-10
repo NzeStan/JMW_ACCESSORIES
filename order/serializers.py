@@ -45,9 +45,8 @@ class OrderSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         cart_id = validated_data.pop('cart_id', None)
-        request = self.context.get('request')
-        user = request.user if request and request.user.is_authenticated else None
-
+        user = validated_data.pop('user', None)  # ✅ Pop user from validated_data to avoid duplicate
+        
         # Resolve Cart
         cart = None
         if cart_id:
@@ -66,7 +65,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         # Create Order (reference will be auto-generated)
         order = Order.objects.create(
-            user=user,
+            user=user,  # ✅ Now using the popped user value
             total_cost=cart.total_price,
             **validated_data
         )
