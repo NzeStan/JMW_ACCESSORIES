@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Order Confirmation</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+        .header h1 {
+            margin: 0 0 5px 0;
+            font-size: 26px;
+            color: #000;
+        }
+        .header .company-name {
+            font-size: 20px;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .header p {
+            margin: 3px 0;
+            font-size: 11px;
+            color: #666;
+        }
+        .document-title {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        .status-badge {
+            display: inline-block;
+            background-color: #ffc107;
+            color: #856404;
+            padding: 5px 15px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+        .info-section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        .info-section h3 {
+            margin: 0 0 12px 0;
+            color: #333;
+            font-size: 14px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+        .two-column {
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .column {
+            display: table-cell;
+            width: 48%;
+            vertical-align: top;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .column:first-child {
+            margin-right: 4%;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            padding: 6px 0;
+            vertical-align: top;
+        }
+        .label {
+            font-weight: bold;
+            width: 140px;
+            color: #555;
+        }
+        .value {
+            color: #000;
+        }
+        .reference-code {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 14px;
+            color: #667eea;
+            background-color: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 3px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            page-break-inside: auto;
+        }
+        .items-table th {
+            background-color: #667eea;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .items-table td {
+            border: 1px solid #ddd;
+            padding: 10px 8px;
+            text-align: left;
+        }
+        .items-table tr {
+            page-break-inside: avoid;
+        }
+        .items-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .items-table tbody tr:hover {
+            background-color: #f0f0f0;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .total-section {
+            margin-top: 20px;
+            page-break-inside: avoid;
+        }
+        .total-row {
+            background-color: #e7f3ff;
+            padding: 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .total-label {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+        }
+        .total-amount {
+            font-weight: bold;
+            font-size: 18px;
+            color: #667eea;
+        }
+        .notice-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 20px 0;
+            border-radius: 3px;
+            page-break-inside: avoid;
+        }
+        .notice-box h4 {
+            margin: 0 0 8px 0;
+            color: #856404;
+            font-size: 13px;
+        }
+        .notice-box p {
+            margin: 5px 0;
+            font-size: 11px;
+            color: #856404;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            page-break-inside: avoid;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">{{ company_name }}</div>
+        <h1>ORDER CONFIRMATION</h1>
+        <p>{{ company_address }}</p>
+        <p>Email: {{ company_email }} | Phone: {{ company_phone }}</p>
+    </div>
+
+    <div class="document-title">
+        Order Confirmation <span class="status-badge">PAYMENT PENDING</span>
+    </div>
+
+    <div class="info-section">
+        <h3>Order Information</h3>
+        <table class="info-table">
+            <tr>
+                <td class="label">Order Reference:</td>
+                <td class="value"><span class="reference-code">{{ order.reference }}</span></td>
+            </tr>
+            <tr>
+                <td class="label">Order Date:</td>
+                <td class="value">{{ order.created|date:"F j, Y - g:i A" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Generated Date:</td>
+                <td class="value">{{ generated_date|date:"F j, Y - g:i A" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Payment Status:</td>
+                <td class="value" style="color: #ffc107; font-weight: bold;">PENDING</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="two-column">
+        <div class="column">
+            <h4 style="margin-top: 0; color: #667eea;">Customer Details</h4>
+            <table class="info-table">
+                <tr>
+                    <td class="label">Name:</td>
+                    <td class="value">{{ order.first_name }} {{ order.last_name }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Email:</td>
+                    <td class="value">{{ order.email }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Phone:</td>
+                    <td class="value">{{ order.phone_number }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="column">
+            <h4 style="margin-top: 0; color: #667eea;">Shipping Address</h4>
+            <table class="info-table">
+                <tr>
+                    <td class="label">Address:</td>
+                    <td class="value">{{ order.address }}</td>
+                </tr>
+                <tr>
+                    <td class="label">City:</td>
+                    <td class="value">{{ order.city }}</td>
+                </tr>
+                <tr>
+                    <td class="label">State:</td>
+                    <td class="value">{{ order.state }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <h3>Order Items</h3>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%">#</th>
+                    <th style="width: 45%">Item Description</th>
+                    <th style="width: 15%" class="text-center">Quantity</th>
+                    <th style="width: 17.5%" class="text-right">Unit Price</th>
+                    <th style="width: 17.5%" class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items.all %}
+                <tr>
+                    <td class="text-center">{{ forloop.counter }}</td>
+                    <td>
+                        <strong>{{ item.content_object.name }}</strong>
+                        {% if item.extra_fields %}
+                            <br><small style="color: #666;">
+                                {% for key, value in item.extra_fields.items %}
+                                    {{ key|title }}: {{ value }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ item.price|floatformat:2 }}</td>
+                    <td class="text-right"><strong>{{ currency_symbol }}{{ item.get_cost|floatformat:2 }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="total-section">
+        <div class="total-row">
+            <span class="total-label">Total Amount:</span>
+            <span class="total-amount">{{ currency_symbol }}{{ order.get_total_cost|floatformat:2 }} {{ currency_code }}</span>
+        </div>
+    </div>
+
+    <div class="notice-box">
+        <h4>⏳ Payment Pending</h4>
+        <p><strong>This is NOT a receipt.</strong> This document confirms your order has been created.</p>
+        <p>Your order will be processed once payment is confirmed. You will receive a separate payment receipt upon successful payment verification.</p>
+        <p>Please complete your payment to proceed with order processing.</p>
+    </div>
+
+    <div class="footer">
+        <p><strong>{{ company_name }}</strong></p>
+        <p>{{ company_address }}</p>
+        <p>Email: {{ company_email }} | Phone: {{ company_phone }}</p>
+        <p style="margin-top: 10px;">
+            This is an automated document generated on {{ generated_date|date:"F j, Y" }}.
+        </p>
+        <p>For inquiries, please contact us using the details above.</p>
+        <p style="margin-top: 10px; font-size: 9px;">
+            &copy; {{ generated_date|date:"Y" }} {{ company_name }}. All rights reserved.
+        </p>
+    </div>
+</body>
+</html>

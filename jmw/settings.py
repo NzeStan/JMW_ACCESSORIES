@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     
     # Third-party utilities
     "django_filters",  # For DRF filtering (DjangoFilterBackend)
+    "drf_spectacular",  # API documentation (OpenAPI/Swagger)
     "whitenoise.runserver_nostatic",
     'background_task',
     
@@ -189,6 +190,15 @@ REST_FRAMEWORK_CONFIG = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day'
+    },
 }
 
 # Add JWT or Session based on environment
@@ -203,6 +213,15 @@ else:
     ]
 
 REST_FRAMEWORK = REST_FRAMEWORK_CONFIG
+
+# DRF Spectacular (API Documentation) Configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Material Wear API',
+    'DESCRIPTION': 'API for managing clothing orders, measurements, and products for JMW Accessories',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+}
 
 AUTH_USER_MODEL = "accounts.CustomUser"
 
@@ -414,9 +433,34 @@ else:
 # COMPANY DETAILS (For Receipts/PDFs)
 # ==============================================================================
 COMPANY_NAME = "JUME MEGA WEARS & ACCESSORIES"
+COMPANY_SHORT_NAME = "JMW"
 COMPANY_ADDRESS = "16 Emejiaka Street, Ngwa Rd, Aba Abia State"
 COMPANY_PHONE = "+2348139425458"
 COMPANY_EMAIL = "info@jumemegawears.com"
+
+# ==============================================================================
+# FRONTEND & API URLS
+# ==============================================================================
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000" if DEBUG else "https://jumemegawears.com")
+API_BASE_URL = env("API_BASE_URL", default="http://localhost:8000" if DEBUG else "https://jmw-accessories.onrender.com")
+PAYMENT_CALLBACK_URL = f"{FRONTEND_URL}/payment/callback"
+
+# ==============================================================================
+# CURRENCY CONFIGURATION
+# ==============================================================================
+CURRENCY_CODE = "NGN"
+CURRENCY_SYMBOL = "₦"
+
+# ==============================================================================
+# RECEIPT CONFIGURATION
+# ==============================================================================
+RECEIPT_PREFIX = COMPANY_SHORT_NAME
+ORDER_CONFIRMATION_SUBJECT = "Order Confirmation - {reference}"
+PAYMENT_RECEIPT_SUBJECT = "Payment Receipt - {reference}"
+
+# PDF Filename Templates
+PDF_FILENAME_ORDER_CONFIRMATION = "{company}_Order_Confirmation_{reference}.pdf"
+PDF_FILENAME_PAYMENT_RECEIPT = "{company}_Payment_Receipt_{reference}.pdf"
 
 # ==============================================================================
 # LOGGING

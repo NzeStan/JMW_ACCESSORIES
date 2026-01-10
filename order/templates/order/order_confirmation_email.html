@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .header p {
+            margin: 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .alert-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .alert-box strong {
+            color: #856404;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 16px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #6c757d;
+        }
+        .info-value {
+            color: #212529;
+            text-align: right;
+        }
+        .reference-code {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 18px;
+            color: #667eea;
+        }
+        .items-section {
+            margin: 20px 0;
+        }
+        .items-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .item {
+            background-color: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+        .item-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .item-details {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .total-section {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: right;
+            margin-top: 20px;
+        }
+        .total-label {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Order Confirmed!</h1>
+            <p>Thank you for shopping with {{ company_name }}</p>
+        </div>
+
+        <div class="content">
+            <div class="alert-box">
+                <strong>⏳ Payment Pending:</strong> Your order has been created successfully. Please complete your payment to start processing.
+            </div>
+
+            <div class="info-box">
+                <h3>Order Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Order Reference:</span>
+                    <span class="info-value reference-code">{{ order.reference }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Order Date:</span>
+                    <span class="info-value">{{ order.created|date:"F j, Y - g:i A" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Customer Name:</span>
+                    <span class="info-value">{{ order.first_name }} {{ order.last_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">{{ order.email }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone:</span>
+                    <span class="info-value">{{ order.phone_number }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Payment Status:</span>
+                    <span class="info-value" style="color: #ffc107; font-weight: bold;">Pending</span>
+                </div>
+            </div>
+
+            <div class="items-section">
+                <h3>Order Items ({{ order.items.count }})</h3>
+                {% for item in order.items.all %}
+                <div class="item">
+                    <div class="item-name">{{ item.content_object.name }}</div>
+                    <div class="item-details">
+                        Quantity: {{ item.quantity }} × {{ currency_symbol }}{{ item.price|floatformat:2 }} = {{ currency_symbol }}{{ item.get_cost|floatformat:2 }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="total-section">
+                <div class="total-label">Total Amount:</div>
+                <div class="total-amount">{{ currency_symbol }}{{ order.get_total_cost|floatformat:2 }}</div>
+            </div>
+
+            <center>
+                <a href="{{ frontend_url }}/payment/{{ order.reference }}" class="button">Complete Payment</a>
+            </center>
+
+            <p style="margin-top: 30px; color: #6c757d; font-size: 14px;">
+                <strong>Note:</strong> Your order will be processed once payment is confirmed.
+                You will receive a separate payment receipt upon successful payment verification.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p><strong>{{ company_name }}</strong></p>
+            <p>{{ company_address }}</p>
+            <p>📧 <a href="mailto:{{ company_email }}">{{ company_email }}</a> | 📞 {{ company_phone }}</p>
+            <p style="margin-top: 15px;">
+                &copy; {{ "now"|date:"Y" }} {{ company_name }}. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

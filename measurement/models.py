@@ -2,8 +2,21 @@ from django.db import models
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from decimal import Decimal
 import uuid
+
+
+class MeasurementManager(models.Manager):
+    """Custom manager to handle soft delete functionality."""
+
+    def get_queryset(self):
+        """Return only non-deleted measurements by default."""
+        return super().get_queryset().filter(is_deleted=False)
+
+    def all_with_deleted(self):
+        """Return all measurements including soft-deleted ones."""
+        return super().get_queryset()
 
 
 class Measurement(models.Model):
@@ -31,12 +44,21 @@ class Measurement(models.Model):
         help_text="Unique identifier for the measurement set",
     )
 
+    # Custom manager for soft delete
+    objects = MeasurementManager()
+
     # Timestamp fields
     created_at = models.DateTimeField(
         auto_now_add=True, help_text="When these measurements were first recorded"
     )
     updated_at = models.DateTimeField(
         auto_now=True, help_text="When these measurements were last updated"
+    )
+
+    # Soft delete field
+    is_deleted = models.BooleanField(
+        default=False,
+        help_text="Soft delete flag - marks measurement as deleted without removing from database",
     )
 
     # Upper body measurements
@@ -190,6 +212,11 @@ class Measurement(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Measurement"
         verbose_name_plural = "Measurements"
+        indexes = [
+            models.Index(
+                fields=["user", "-created_at"], name="measurement_user_created_idx"
+            ),
+        ]
 
     def __str__(self):
         """Return a string representation of the measurement."""
@@ -198,4 +225,33 @@ class Measurement(models.Model):
     def get_absolute_url(self):
         """Return the URL to access a detail view of this measurement."""
         return reverse("update_measurement", args=[str(self.id)])
+
+    def clean(self):
+        """Ensure at least one measurement field is provided."""
+        measurement_fields = [
+            self.chest,
+            self.shoulder,
+            self.neck,
+            self.sleeve_length,
+            self.sleeve_round,
+            self.top_length,
+            self.waist,
+            self.thigh,
+            self.knee,
+            self.ankle,
+            self.hips,
+            self.trouser_length,
+        ]
+
+        if all(field is None for field in measurement_fields):
+            raise ValidationError("At least one measurement must be provided.")
+
+    def delete(self, *args, **kwargs):
+        """Soft delete - mark as deleted instead of removing."""
+        self.is_deleted = True
+        self.save()
+
+    def hard_delete(self):
+        """Permanently delete the measurement."""
+        super().delete()
 

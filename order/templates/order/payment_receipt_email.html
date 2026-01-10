@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: #ffffff;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .header .success-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .success-box {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .success-box strong {
+            color: #155724;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 16px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #6c757d;
+        }
+        .info-value {
+            color: #212529;
+            text-align: right;
+        }
+        .reference-code {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 18px;
+            color: #28a745;
+        }
+        .payment-box {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .payment-box h3 {
+            margin: 0 0 10px 0;
+            color: #155724;
+            font-size: 18px;
+        }
+        .payment-amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #28a745;
+            margin: 10px 0;
+        }
+        .payment-status {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 6px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .items-section {
+            margin: 20px 0;
+        }
+        .items-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .item {
+            background-color: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+        }
+        .item-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .item-details {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .next-steps {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .next-steps h4 {
+            margin: 0 0 10px 0;
+            color: #0c5460;
+        }
+        .next-steps ul {
+            margin: 10px 0;
+            padding-left: 20px;
+            color: #0c5460;
+        }
+        .next-steps li {
+            margin: 5px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .footer a {
+            color: #28a745;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="success-icon">✅</div>
+            <h1>Payment Received!</h1>
+            <p>Your payment has been successfully processed</p>
+        </div>
+
+        <div class="content">
+            <div class="success-box">
+                <strong>✓ Payment Confirmed:</strong> Thank you! Your payment has been verified and your order is now being processed.
+            </div>
+
+            <div class="payment-box">
+                <h3>Payment Details</h3>
+                <div class="payment-amount">{{ currency_symbol }}{{ payment.amount|floatformat:2 }}</div>
+                <div class="payment-status">✓ PAID</div>
+                <p style="margin: 10px 0 0 0; font-size: 14px; color: #155724;">
+                    Reference: <strong>{{ payment.reference }}</strong>
+                </p>
+            </div>
+
+            <div class="info-box">
+                <h3>Transaction Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Payment Reference:</span>
+                    <span class="info-value reference-code">{{ payment.reference }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Order Reference:</span>
+                    <span class="info-value reference-code">{{ order.reference }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Payment Date:</span>
+                    <span class="info-value">{{ payment.verified_at|date:"F j, Y - g:i A" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Payment Gateway:</span>
+                    <span class="info-value">Paystack</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Customer Name:</span>
+                    <span class="info-value">{{ order.first_name }} {{ order.last_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">{{ payment.email }}</span>
+                </div>
+            </div>
+
+            <div class="items-section">
+                <h3>Order Summary ({{ order.items.count }} items)</h3>
+                {% for item in order.items.all %}
+                <div class="item">
+                    <div class="item-name">{{ item.content_object.name }}</div>
+                    <div class="item-details">
+                        Quantity: {{ item.quantity }} × {{ currency_symbol }}{{ item.price|floatformat:2 }} = {{ currency_symbol }}{{ item.get_cost|floatformat:2 }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="next-steps">
+                <h4>📦 What's Next?</h4>
+                <ul>
+                    <li>Your order is now in our processing queue</li>
+                    <li>We'll notify you when your order is ready for shipping</li>
+                    <li>Track your order status using your order reference: <strong>{{ order.reference }}</strong></li>
+                    <li>A detailed PDF receipt has been attached to this email</li>
+                </ul>
+            </div>
+
+            <center>
+                <a href="{{ frontend_url }}/orders/{{ order.reference }}" class="button">View Order Details</a>
+            </center>
+
+            <p style="margin-top: 30px; color: #6c757d; font-size: 14px; text-align: center;">
+                <strong>Thank you for your business!</strong><br>
+                If you have any questions, please don't hesitate to contact us.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p><strong>{{ company_name }}</strong></p>
+            <p>{{ company_address }}</p>
+            <p>📧 <a href="mailto:{{ company_email }}">{{ company_email }}</a> | 📞 {{ company_phone }}</p>
+            <p style="margin-top: 15px;">
+                &copy; {{ "now"|date:"Y" }} {{ company_name }}. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

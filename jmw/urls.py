@@ -18,15 +18,26 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView,
+)
 
 urlpatterns = [
     # Django admin
     path("i_must_win/", admin.site.urls),
+
+    # API Documentation (OpenAPI/Swagger)
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+
     # API Auth
     path("api/auth/", include("dj_rest_auth.urls")),
     path("api/auth/registration/", include("dj_rest_auth.registration.urls")),
     path("api/auth/social/", include("accounts.urls")),
-    
+
     # Local apps (API)
     path("api/products/", include("products.urls", namespace="products")),
     path("api/cart/", include("cart.urls", namespace="cart")),
